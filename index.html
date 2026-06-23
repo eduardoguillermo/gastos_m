@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FinanzasPro - Custom Wallets</title>
     
+    <!-- Vinculación de PWA con rutas adaptadas a GitHub Pages -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -265,17 +266,18 @@
         if (storageDisponible) localStorage.setItem(SKEY, JSON.stringify(DB));
     }
 
-    // --- BLOQUE DE REGISTRO BLINDADO CON RUTA DINÁMICA DE REPOSITORIO ---
+    // --- SISTEMA DE REGISTRO DIRECCIONAL DE PWA CON TRAZA ---
+    console.log("PWA: Iniciando secuencia de verificación...");
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            // Calcula de forma exacta el subdirectorio del repositorio de GitHub Pages
-            const baseDir = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
-            const swPath = baseDir + 'sw.js';
-            
-            navigator.serviceWorker.register(swPath, { scope: baseDir })
-                .then(reg => console.log('PWA: Service Worker activo en alcance: ' + reg.scope))
-                .catch(err => console.error('PWA: Error crítico de registro:', err));
-        });
+        const repoPath = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
+        const finalSwUrl = repoPath + 'sw.js';
+        
+        console.log("PWA: Intentando registrar script en la ruta:", finalSwUrl);
+        navigator.serviceWorker.register(finalSwUrl, { scope: repoPath })
+            .then(reg => console.log('✅ PWA: Service Worker registrado con alcance:', reg.scope))
+            .catch(err => console.error('❌ PWA: Falló el registro del script:', err));
+    } else {
+        console.warn("⚠️ PWA: Este navegador no soporta Service Workers.");
     }
 
     function guardarNombresBancos() {
@@ -306,7 +308,6 @@
         save(); render();
     }
 
-    // (El resto de funciones auxiliares se mantienen idénticas para asegurar consistencia de datos)
     function editarRubro(id) {
         const rubro = DB.rubros.find(r => r.id == id);
         if (!rubro) return;
