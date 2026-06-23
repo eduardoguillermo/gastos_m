@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinanzasPro - Compact Edition</title>
+    <title>FinanzasPro - Fullscreen Edition</title>
     <style>
         :root {
-            --bg-main: #f8fafc;
+            --bg-main: #f1f5f9;
             --bg-card: #ffffff;
             --text-main: #0f172a;
             --text-muted: #64748b;
@@ -21,50 +21,77 @@
         
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
+        /* Ocupar toda la pantalla de forma estática sin scroll global */
+        html, body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+        
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             background: var(--bg-main); 
             color: var(--text-main); 
-            padding: 12px;
+            padding: 8px;
             font-size: 13px;
+            display: flex;
+            flex-direction: column;
         }
         
-        .container { max-width: 1400px; margin: 0 auto; }
+        .container { 
+            width: 100%; 
+            height: 100%;
+            max-width: 100%; 
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
         
-        /* Barra Superior Ultra Compacta */
+        /* Barra Superior Fija */
         header { 
             display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 12px; background: var(--bg-card); padding: 6px 14px;
+            background: var(--bg-card); padding: 8px 14px;
             border-radius: var(--radius); border: 1px solid var(--border);
+            flex-shrink: 0;
         }
         header h1 { font-size: 14px; font-weight: 700; }
         header h1 span { color: var(--primary); }
         
-        /* Micro Balances en Línea */
         .balance-strip { display: flex; gap: 16px; align-items: center; }
         .balance-item { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--text-muted); }
         .balance-item b { font-size: 15px; font-weight: 700; color: var(--text-main); }
         
-        /* Grid de 3 Columnas: Uso Total del Espacio */
-        .workspace-grid { display: grid; grid-template-columns: 280px 280px 1fr; gap: 12px; margin-bottom: 12px; }
-        @media (max-width: 1024px) { .workspace-grid { grid-template-columns: 1fr; } }
-        
-        .panel { 
-            background: var(--bg-card); padding: 14px; border-radius: var(--radius); 
-            border: 1px solid var(--border); display: flex; flex-direction: column;
+        /* Grid de Trabajo que consume el alto disponible */
+        .workspace-grid { 
+            display: grid; 
+            grid-template-columns: 290px 290px 1fr; 
+            gap: 8px; 
+            flex-grow: 1;
+            min-height: 0; /* Permite a los hijos encogerse y scrolear */
         }
-        .panel h3 { font-size: 13px; font-weight: 700; margin-bottom: 12px; padding-bottom: 4px; border-bottom: 1px solid var(--border); color: #334155; }
+        @media (max-width: 1024px) { 
+            .workspace-grid { grid-template-columns: 1fr; overflow-y: auto; } 
+            .panel { height: auto !important; max-height: none !important; }
+        }
         
-        /* Formularios Ajustados */
-        .form-group { margin-bottom: 8px; }
-        label { display: block; margin-bottom: 3px; font-weight: 600; font-size: 11px; color: #475569; }
+        /* Paneles con altura interna controlada */
+        .panel { 
+            background: var(--bg-card); padding: 12px; border-radius: var(--radius); 
+            border: 1px solid var(--border); display: flex; flex-direction: column;
+            height: 100%; min-height: 0;
+        }
+        .panel h3 { font-size: 13px; font-weight: 700; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border); color: #334155; flex-shrink: 0; }
+        
+        .form-container { flex-shrink: 0; }
+        .form-group { margin-bottom: 6px; }
+        label { display: block; margin-bottom: 2px; font-weight: 600; font-size: 11px; color: #475569; }
         input, select { 
             width: 100%; padding: 6px 8px; border: 1px solid var(--border); 
             border-radius: 4px; font-size: 12px; color: var(--text-main); background-color: #fff;
         }
         input:focus, select:focus { outline: none; border-color: var(--primary); }
         
-        /* Botonera Compacta */
         button { 
             display: inline-flex; align-items: center; justify-content: center; gap: 4px;
             padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; 
@@ -75,22 +102,23 @@
         button.btn-secondary { background: #e2e8f0; color: #334155; }
         button.btn-secondary:hover { background: #cbd5e1; }
         
-        /* Listas de Densidad Alta (Filas Chicas) */
-        .scroll-list { overflow-y: auto; padding-right: 2px; }
-        #lista-rubros { max-height: 220px; }
-        #lista-movimientos { max-height: 580px; } /* Más espacio vertical para el libro diario */
-        
+        /* Contenedores con scroll independiente */
+        .scroll-list { 
+            overflow-y: auto; 
+            flex-grow: 1;
+            padding-right: 2px;
+            min-height: 0;
+        }
         .scroll-list::-webkit-scrollbar { width: 4px; }
         .scroll-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
         
         .compact-row { 
             display: flex; justify-content: space-between; align-items: center; 
-            padding: 6px 8px; background: #f8fafc; border: 1px solid #e2e8f0;
+            padding: 5px 8px; background: #f8fafc; border: 1px solid #e2e8f0;
             border-radius: 4px; margin-bottom: 4px; font-size: 12px;
         }
         .compact-row:hover { background: #f1f5f9; }
         
-        /* Micro Badges */
         .badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
         .badge.gasto { background: var(--gasto-bg); color: var(--gasto); }
         .badge.ingreso { background: var(--ingreso-bg); color: var(--ingreso); }
@@ -100,15 +128,15 @@
         .btn-trigger:hover { background: #e2e8f0; color: var(--text-main); }
         .btn-trigger.danger:hover { background: var(--gasto-bg); color: var(--gasto); }
         
-        /* Filtros Alineados */
         .filter-strip { display: flex; background: #e2e8f0; padding: 2px; border-radius: 4px; gap: 2px; }
         .filter-tab { background: transparent; color: var(--text-muted); padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; }
         .filter-tab.active { background: white; color: var(--text-main); }
         
-        /* Footer Toolbar Minimal */
+        /* Footer Toolbar Fijo */
         footer { 
             background: var(--bg-card); border: 1px solid var(--border); padding: 6px 14px; 
             border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center; font-size: 11px;
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -116,9 +144,8 @@
 
 <div class="container">
     <header>
-        <h1>Finanzas<span>Pro</span> <small style="font-weight:normal; color:var(--text-muted); font-size:11px;">v3.0</small></h1>
+        <h1>Finanzas<span>Pro</span> <small style="font-weight:normal; color:var(--text-muted); font-size:11px;">v3.5 Fullscreen</small></h1>
         
-        <!-- Almacenamiento en una sola línea fluida -->
         <div class="balance-strip">
             <div class="balance-item">Balance: <b id="view-balance">$0,00</b></div>
             <div style="width:1px; height:14px; background:var(--border);"></div>
@@ -129,51 +156,55 @@
     </header>
     
     <div class="workspace-grid">
-        <!-- Columna 1: Configuración de Rubros -->
+        <!-- Columna 1: Categorías / Rubros (Fijo arriba, lista con scroll abajo) -->
         <div class="panel">
             <h3>📁 Rubros</h3>
-            <div class="form-group">
-                <label for="rubro-nombre">Nombre Rubro</label>
-                <input type="text" id="rubro-nombre" autocomplete="off" placeholder="Ej: Nafta...">
-            </div>
-            <div class="form-group">
-                <label for="rubro-tipo">Tipo</label>
-                <select id="rubro-tipo">
-                    <option value="gasto">Gasto</option>
-                    <option value="ingreso">Ingreso</option>
-                </select>
-            </div>
-            <input type="hidden" id="rubro-edit-id" value="">
-            
-            <div style="display: flex; gap: 4px; margin-bottom: 10px;">
-                <button id="btn-guardar-rubro" class="btn-primary" style="flex:1;">Añadir</button>
-                <button id="btn-cancelar-rubro" class="btn-secondary" style="display:none;">X</button>
+            <div class="form-container">
+                <div class="form-group">
+                    <label for="rubro-nombre">Nombre Rubro</label>
+                    <input type="text" id="rubro-nombre" autocomplete="off" placeholder="Ej: Nafta...">
+                </div>
+                <div class="form-group">
+                    <label for="rubro-tipo">Tipo</label>
+                    <select id="rubro-tipo">
+                        <option value="gasto">Gasto</option>
+                        <option value="ingreso">Ingreso</option>
+                    </select>
+                </div>
+                <input type="hidden" id="rubro-edit-id" value="">
+                
+                <div style="display: flex; gap: 4px; margin-bottom: 10px;">
+                    <button id="btn-guardar-rubro" class="btn-primary" style="flex:1;">Añadir</button>
+                    <button id="btn-cancelar-rubro" class="btn-secondary" style="display:none;">X</button>
+                </div>
             </div>
             
             <div class="scroll-list" id="lista-rubros"></div>
         </div>
 
-        <!-- Columna 2: Formulario de Carga Directa -->
+        <!-- Columna 2: Carga de Transacciones (Panel estático corto) -->
         <div class="panel">
             <h3>✍️ Carga de Transacciones</h3>
-            <div class="form-group">
-                <label for="mov-concepto">Concepto / Detalle</label>
-                <input type="text" id="mov-concepto" autocomplete="off" placeholder="Ej: Pago repuesto...">
+            <div class="form-container">
+                <div class="form-group">
+                    <label for="mov-concepto">Concepto / Detalle</label>
+                    <input type="text" id="mov-concepto" autocomplete="off" placeholder="Ej: Pago repuesto...">
+                </div>
+                <div class="form-group">
+                    <label for="mov-monto">Monto ($)</label>
+                    <input type="number" id="mov-monto" step="0.01" min="0.01" placeholder="0,00">
+                </div>
+                <div class="form-group">
+                    <label for="mov-rubro">Asignar Rubro</label>
+                    <select id="mov-rubro"></select>
+                </div>
+                <button id="btn-guardar-movimiento" class="btn-primary btn-block" style="background:#0f172a; margin-top:6px;">Asentar Registro</button>
             </div>
-            <div class="form-group">
-                <label for="mov-monto">Monto ($)</label>
-                <input type="number" id="mov-monto" step="0.01" min="0.01" placeholder="0,00">
-            </div>
-            <div class="form-group">
-                <label for="mov-rubro">Asignar Rubro</label>
-                <select id="mov-rubro"></select>
-            </div>
-            <button id="btn-guardar-movimiento" class="btn-primary btn-block" style="background:#0f172a; margin-top:4px;">Asentar Registro</button>
         </div>
 
-        <!-- Columna 3: El Historial Contable Extendido -->
+        <!-- Columna 3: Libro Diario Completo (Aprovechamiento total con scroll propio) -->
         <div class="panel">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); flex-shrink: 0;">
                 <h3 style="margin-bottom:0; border-bottom:none;">📊 Libro de Movimientos</h3>
                 <div class="filter-strip">
                     <button class="filter-tab active" id="filter-all">Todos</button>
@@ -185,9 +216,8 @@
         </div>
     </div>
 
-    <!-- Barra Inferior de utilidades -->
     <footer>
-        <span style="color: var(--text-muted);" id="db-status">DB Local Sincronizada (Brave OK)</span>
+        <span style="color: var(--text-muted);" id="db-status">Almacenamiento Local Activo</span>
         <div class="actions-wrapper">
             <button class="btn-secondary" onclick="exportarBackup()" style="padding: 4px 8px; font-size:11px;">📥 Exportar</button>
             <button class="btn-secondary" onclick="document.getElementById('file-import').click()" style="padding: 4px 8px; font-size:11px;">📤 Importar</button>
@@ -203,7 +233,7 @@
         localStorage.removeItem('__brve__');
     } catch (e) {
         storageDisponible = false;
-        document.getElementById('db-status').textContent = "Modo Volátil (Shields Bloqueante)";
+        document.getElementById('db-status').textContent = "Modo Volátil (Brave Shields)";
     }
 
     let DB = {
@@ -216,7 +246,7 @@
         movimientos: []
     };
 
-    const SKEY = 'finanzas-pro-compact-v3';
+    const SKEY = 'finanzas-pro-compact-v4';
     let filtroActual = 'all';
 
     window.onload = function() {
@@ -305,11 +335,17 @@
         save(); render();
     }
 
+    // Exportación con Fecha y Hora exacta (Timestamp completo)
     function exportarBackup() {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB, null, 2));
         const downloadAnchor = document.createElement('a');
+        
+        const ahora = new Date();
+        const fechaStr = ahora.toISOString().slice(0,10); // AAAA-MM-DD
+        const horaStr = ahora.toTimeString().slice(0,8).replace(/:/g, '-'); // HH-MM-SS
+        
         downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `backup_contable_${new Date().toISOString().slice(0,10)}.json`);
+        downloadAnchor.setAttribute("download", `backup_contable_${fechaStr}_${horaStr}.json`);
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click(); downloadAnchor.remove();
     }
@@ -323,7 +359,7 @@
                     DB = parsed; save(); render();
                     alert('Base sincronizada.');
                 }
-            } catch(e) { alert('Formarto no válido.'); }
+            } catch(e) { alert('Formato no válido.'); }
         };
         if(event.target.files[0]) reader.readAsText(event.target.files[0]);
         event.target.value = '';
@@ -341,7 +377,6 @@
     }
 
     function render() {
-        // 1. Render Rubros activos
         const listaRubros = document.getElementById('lista-rubros');
         listaRubros.innerHTML = '';
         DB.rubros.forEach(r => {
@@ -359,7 +394,6 @@
             listaRubros.appendChild(div);
         });
 
-        // 2. Render Selector de rubro
         const rubroSelect = document.getElementById('mov-rubro');
         rubroSelect.innerHTML = '';
         DB.rubros.forEach(r => {
@@ -369,7 +403,6 @@
             rubroSelect.appendChild(opt);
         });
 
-        // 3. Render Historial y sumas
         const listaMovimientos = document.getElementById('lista-movimientos');
         listaMovimientos.innerHTML = '';
         let tIngresos = 0, tGastos = 0;
