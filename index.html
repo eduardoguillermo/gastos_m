@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Gastos e Ingresos</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --text: #2c3e50;
+            --text-light: #7f8c8d;
+            --primary: #3498db;
+            --primary-hover: #2980b9;
+            --gasto: #e74c3c;
+            --ingreso: #2ecc71;
+            --border: #dcdde1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: var(--bg); color: var(--text); padding: 20px; 
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header { margin-bottom: 25px; text-align: center; }
+        header h1 { font-size: 26px; color: #1e272e; }
+        .balance-card { 
+            background: var(--card); padding: 20px; border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px; text-align: center; 
+        }
+        .balance-total { font-size: 36px; font-weight: 800; margin-bottom: 15px; }
+        .balance-stats { display: flex; justify-content: space-around; border-top: 1px solid var(--border); padding-top: 15px; }
+        .stat-box { display: flex; flex-direction: column; width: 45%; }
+        .stat-box b { font-size: 20px; font-weight: 700; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .card h3 { font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid var(--bg); padding-bottom: 8px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
+        input, select { 
+            width: 100%; padding: 10px 12px; border: 1px solid var(--border); 
+            border-radius: 6px; font-size: 14px; background-color: #fff;
+        }
+        button { 
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; 
+            font-weight: 600; font-size: 14px;
+        }
+        button.btn-primary { background: var(--primary); color: white; }
+        button.btn-success { background: var(--ingreso); color: white; width: 100%; padding: 12px; font-size: 15px; }
+        .list-container { max-height: 260px; overflow-y: auto; margin-top: 15px; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 8px; border-bottom: 1px solid var(--bg); }
+        .badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; color: white; font-weight: 700; text-transform: uppercase; }
+        .badge.gasto { background: var(--gasto); }
+        .badge.ingreso { background: var(--ingreso); }
+        .flex-actions { display: flex; gap: 6px; align-items: center; }
+        .btn-action { background: #f1f2f6; color: var(--text); padding: 6px 10px; border-radius: 4px; }
+        .filter-bar { display: flex; gap: 10px; margin-bottom: 15px; }
+        .filter-btn { background: #e4e7eb; color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+        .filter-btn.active { background: var(--text); color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Control de Gastos & Ingresos</h1>
+    </header>
+    
+    <div class="balance-card">
+        <h2>Balance General</h2>
+        <div class="balance-total" id="balance-total">$0,00</div>
+        <div class="balance-stats">
+            <div class="stat-box" style="color: var(--ingreso);">
+                <span>Ingresos</span>
+                <b id="balance-ingresos">$0,00</b>
+            </div>
+            <div style="width: 1px; background: var(--border);"></div>
+            <div class="stat-box" style="color: var(--gasto);">
+                <span>Gastos</span>
+                <b id="balance-gastos">$0,00</b>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h3>Configurar Rubros</h3>
+            <div class="form-group">
+                <label for="rubro-nombre">Nombre del Rubro</label>
+                <input type="text" id="rubro-nombre" placeholder="Ej: Supermercado...">
+            </div>
+            <div class="form-group">
+                <label for="rubro-tipo">Tipo de Flujo</label>
+                <select id="rubro-tipo">
+                    <option value="gasto">Gasto</option>
+                    <option value="ingreso">Ingreso</option>
+                </select>
+            </div>
+            <input type="hidden" id="rubro-edit-id" value="">
+            
+            <div class="flex-actions" style="margin-bottom: 10px;">
+                <button id="btn-guardar-rubro" class="btn-primary">Agregar Rubro</button>
+                <button id="btn-cancelar-rubro" style="display:none; background:#95a5a6; color:white;">Cancelar</button>
+            </div>
+
+            <h4 style="font-size: 14px; color: var(--text-light); margin-top: 15px;">Rubros Activos</h4>
+            <div class="list-container" id="lista-rubros"></div>
+        </div>
+
+        <div class="card">
+            <h3>Registrar Movimiento</h3>
+            <div class="form-group">
+                <label for="mov-concepto">Concepto / Descripción</label>
+                <input type="text" id="mov-concepto" placeholder="Ej: Compra Coto...">
+            </div>
+            <div class="form-group">
+                <label for="mov-monto">Monto ($)</label>
+                <input type="number" id="mov-monto" step="0.01" min="0.01" placeholder="0,00">
+            </div>
+            <div class="form-group">
+                <label for="mov-rubro">Asignar Rubro</label>
+                <select id="mov-rubro"></select>
+            </div>
+            <button id="btn-guardar-movimiento" class="btn-success">Guardar Transacción</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px;">
+            <h3>Historial de Movimientos</h3>
+            <div class="filter-bar">
+                <button class="filter-btn active" id="filter-all">Todos</button>
+                <button class="filter-btn" id="filter-gasto">Gastos</button>
+                <button class="filter-btn" id="filter-ingreso">Ingresos</button>
+            </div>
+        </div>
+        <div id="lista-movimientos" style="max-height: 400px; overflow-y: auto;"></div>
+    </div>
+</div>
+
+<script>
+    let storageDisponible = true;
+    try {
+        localStorage.setItem('__test__', '1');
+        localStorage.removeItem('__test__');
+    } catch (e) {
+        storageDisponible = false;
+        console.warn("localStorage bloqueado por el navegador. Usando memoria temporal.");
+    }
+
+    let DB = {
+        nid: 1,
+        rubros: [
+            { id: 1, nombre: 'Sueldo', tipo: 'ingreso' },
+            { id: 2, nombre: 'Supermercado', tipo: 'gasto' },
+            { id: 3, nombre: 'Servicios', tipo: 'gasto' }
+        ],
+        movimientos: []
+    };
+
+    const SKEY = 'control-gastos-db-v3';
+    let filtroActual = 'all';
+
+    window.onload = function() {
+        if (storageDisponible && localStorage.getItem(SKEY)) {
+            try {
+                DB = JSON.parse(localStorage.getItem(SKEY));
+            } catch(e) { 
+                console.error("Error al parsear DB", e);
+            }
+        } else {
+            DB.nid = 4;
+            save();
+        }
+        
+        document.getElementById('btn-guardar-rubro').addEventListener('click', guardarRubro);
+        document.getElementById('btn-cancelar-rubro').addEventListener('click', cancelarEdicionRubro);
+        document.getElementById('btn-guardar-movimiento').addEventListener('click', guardarMovimiento);
+        
+        document.getElementById('filter-all').addEventListener('click', () => setFiltro('all'));
+        document.getElementById('filter-gasto').addEventListener('click', () => setFiltro('gasto'));
+        document.getElementById('filter-ingreso').addEventListener('click', () => setFiltro('ingreso'));
+
+        render();
+    };
+
+    function save() {
+        if (storageDisponible) {
+            try {
+                localStorage.setItem(SKEY, JSON.stringify(DB));
+            } catch(e) {
+                console.error("Error al guardar", e);
+            }
+        }
+    }
+
+    function guardarRubro() {
+        const nombreInput = document.getElementById('rubro-nombre');
+        const tipoSelect = document.getElementById('rubro-tipo');
+        const editIdInput = document.getElementById('rubro-edit-id');
+        
+        const nombre = nombreInput.value.trim();
+        const tipo = tipoSelect.value;
+        const editId = editIdInput.value;
+
+        if (!nombre) return alert('Escribí un nombre para el rubro.');
+
+        if (editId) {
+            const rubro = DB.rubros.find(r => r.id == editId);
+            if (rubro) {
+                rubro.nombre = nombre;
+                rubro.tipo = tipo;
+            }
+            document.getElementById('btn-guardar-rubro').textContent = 'Agregar Rubro';
+            document.getElementById('btn-cancelar-rubro').style.display = 'none';
+            editIdInput.value = '';
+        } else {
+            DB.rubros.push({ id: DB.nid++, nombre: nombre, tipo: tipo });
+        }
+
+        nombreInput.value = '';
+        save();
+        render();
+    }
+
+    function editarRubro(id) {
+        const rubro = DB.rubros.find(r => r.id == id);
+        if (!rubro) return;
+
+        document.getElementById('rubro-nombre').value = rubro.nombre;
+        document.getElementById('rubro-tipo').value = rubro.tipo;
+        document.getElementById('rubro-edit-id').value = rubro.id;
+        
+        document.getElementById('btn-guardar-rubro').textContent = 'Actualizar Rubro';
+        document.getElementById('btn-cancelar-rubro').style.display = 'inline-block';
+    }
+
+    function eliminarRubro(id) {
+        if (!confirm('¿Eliminar rubro?')) return;
+        DB.rubros = DB.rubros.filter(r => r.id != id);
+        save();
+        render();
+    }
+
+    function guardarMovimiento() {
+        const conceptoInput = document.getElementById('mov-concepto');
+        const montoInput = document.getElementById('mov-monto');
+        const rubroSelect = document.getElementById('mov-rubro');
+
+        const concepto = conceptoInput.value.trim() || 'Sin concepto';
+        const monto = parseFloat(montoInput.value);
+        const rubroId = parseInt(rubroSelect.value);
+
+        if (isNaN(monto) || monto <= 0) return alert('Ingresá un monto válido.');
+        if (isNaN(rubroId)) return alert('Seleccioná un rubro.');
+
+        DB.movimientos.push({
+            id: DB.nid++,
+            concepto: concepto,
+            monto: monto,
+            rubroId: rubroId,
+            fecha: new Date().toLocaleDateString()
+        });
+
+        conceptoInput.value = '';
+        montoInput.value = '';
+        save();
+        render();
+    }
+
+    function eliminarMovimiento(id) {
+        if (!confirm('¿Eliminar movimiento?')) return;
+        DB.movimientos = DB.movimientos.filter(m => m.id != id);
+        save();
+        render();
+    }
+
+    function setFiltro(tipo) {
+        filtroActual = tipo;
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`filter-${tipo}`).classList.add('active');
+        render();
+    }
+
+    function formatMoneda(valor) {
+        return '$' + valor.toFixed(2).replace('.', ',');
+    }
+
+    function render() {
+        const listaRubros = document.getElementById('lista-rubros');
+        listaRubros.innerHTML = '';
+        DB.rubros.forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.innerHTML = `
+                <span><strong>${r.nombre}</strong> <span class="badge ${r.tipo}">${r.tipo}</span></span>
+                <div class="flex-actions">
+                    <button class="btn-action edit-r-btn">✏️</button>
+                    <button class="btn-action btn-del del-r-btn">🗑️</button>
+                </div>
+            `;
+            div.querySelector('.edit-r-btn').addEventListener('click', () => editarRubro(r.id));
+            div.querySelector('.del-r-btn').addEventListener('click', () => eliminarRubro(r.id));
+            listaRubros.appendChild(div);
+        });
+
+        const rubroSelect = document.getElementById('mov-rubro');
+        rubroSelect.innerHTML = '';
+        DB.rubros.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            opt.textContent = `${r.nombre} (${r.tipo})`;
+            rubroSelect.appendChild(opt);
+        });
+
+        const listaMovimientos = document.getElementById('lista-movimientos');
+        listaMovimientos.innerHTML = '';
+        
+        let totalIngresos = 0;
+        let totalGastos = 0;
+
+        DB.movimientos.forEach(m => {
+            const rubro = DB.rubros.find(r => r.id === m.rubroId);
+            const tipo = rubro ? rubro.tipo : 'gasto';
+            if (tipo === 'ingreso') totalIngresos += m.monto;
+            if (tipo === 'gasto') totalGastos += m.monto;
+        });
+
+        const filtrados = DB.movimientos.filter(m => {
+            if (filtroActual === 'all') return true;
+            const rubro = DB.rubros.find(r => r.id === m.rubroId);
+            return (rubro ? rubro.tipo : 'gasto') === filtroActual;
+        });
+
+        if (filtrados.length === 0) {
+            listaMovimientos.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-light);">Sin registros.</div>`;
+        } else {
+            [...filtrados].reverse().forEach(m => {
+                const rubro = DB.rubros.find(r => r.id === m.rubroId);
+                const tipo = rubro ? rubro.tipo : 'gasto';
+                const nombreRubro = rubro ? rubro.nombre : 'Sin rubro';
+
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `
+                    <div>
+                        <strong>${m.concepto}</strong> <small style="color:var(--text-light);">${m.fecha}</small><br>
+                        <span class="badge ${tipo}">${nombreRubro}</span>
+                    </div>
+                    <div class="flex-actions">
+                        <span style="font-weight:700; color:var(--${tipo})">${tipo === 'gasto' ? '-' : '+'}${formatMoneda(m.monto)}</span>
+                        <button class="btn-action btn-del del-m-btn">🗑️</button>
+                    </div>
+                `;
+                div.querySelector('.del-m-btn').addEventListener('click', () => eliminarMovimiento(m.id));
+                listaMovimientos.appendChild(div);
+            });
+        }
+
+        const balanceTotal = totalIngresos - totalGastos;
+        document.getElementById('balance-ingresos').textContent = formatMoneda(totalIngresos);
+        document.getElementById('balance-gastos').textContent = formatMoneda(totalGastos);
+        
+        const balanceEl = document.getElementById('balance-total');
+        balanceEl.textContent = formatMoneda(balanceTotal);
+        balanceEl.style.color = balanceTotal >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
+    }
+
+    function cancelarEdicionRubro() {
+        document.getElementById('rubro-nombre').value = '';
+        document.getElementById('rubro-edit-id').value = '';
+        document.getElementById('btn-guardar-rubro').textContent = 'Agregar Rubro';
+        document.getElementById('btn-cancelar-rubro').style.display = 'none';
+    }
+</script>
+</body>
+</html>
