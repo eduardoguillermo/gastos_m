@@ -3,217 +3,431 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinanzasPro - Dashboard Premium</title>
+    <title>FinanzasPro - Compact Edition</title>
     <style>
         :root {
-            --bg-main: #f1f5f9;
+            --bg-main: #f8fafc;
             --bg-card: #ffffff;
             --text-main: #0f172a;
             --text-muted: #64748b;
-            
             --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --primary-light: #eff6ff;
-            
-            --ingreso: #059669;
-            --ingreso-bg: #ecfdf5;
-            --gasto: #dc2626;
-            --gasto-bg: #fef2f2;
-            
-            --border: #e2e8f0;
-            --radius-lg: 16px;
-            --radius-md: 12px;
-            --radius-sm: 8px;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-            --transition: all 0.2s ease-in-out;
+            --ingreso: #10b981;
+            --ingreso-bg: #e6f4ea;
+            --gasto: #ef4444;
+            --gasto-bg: #fce8e6;
+            --border: #cbd5e1;
+            --radius: 6px;
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             background: var(--bg-main); 
             color: var(--text-main); 
-            padding: 40px 20px;
-            -webkit-font-smoothing: antialiased;
+            padding: 12px;
+            font-size: 13px;
         }
         
-        .container { max-width: 1040px; margin: 0 auto; }
+        .container { max-width: 1400px; margin: 0 auto; }
         
-        /* Navbar / Header */
+        /* Barra Superior Ultra Compacta */
         header { 
             display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 32px; background: var(--bg-card); padding: 18px 24px;
-            border-radius: var(--radius-md); border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+            margin-bottom: 12px; background: var(--bg-card); padding: 6px 14px;
+            border-radius: var(--radius); border: 1px solid var(--border);
         }
-        header h1 { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+        header h1 { font-size: 14px; font-weight: 700; }
         header h1 span { color: var(--primary); }
         
-        /* Dashboard de Métricas */
-        .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; }
-        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; gap: 16px; } }
+        /* Micro Balances en Línea */
+        .balance-strip { display: flex; gap: 16px; align-items: center; }
+        .balance-item { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--text-muted); }
+        .balance-item b { font-size: 15px; font-weight: 700; color: var(--text-main); }
         
-        .dash-card { 
-            background: var(--bg-card); padding: 24px; border-radius: var(--radius-lg); 
-            border: 1px solid var(--border); box-shadow: var(--shadow-md); position: relative; overflow: hidden;
+        /* Grid de 3 Columnas: Uso Total del Espacio */
+        .workspace-grid { display: grid; grid-template-columns: 280px 280px 1fr; gap: 12px; margin-bottom: 12px; }
+        @media (max-width: 1024px) { .workspace-grid { grid-template-columns: 1fr; } }
+        
+        .panel { 
+            background: var(--bg-card); padding: 14px; border-radius: var(--radius); 
+            border: 1px solid var(--border); display: flex; flex-direction: column;
         }
-        .dash-card::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-        }
-        .dash-card.balance::before { background: linear-gradient(90deg, var(--primary), #3b82f6); }
-        .dash-card.ingresos::before { background: linear-gradient(90deg, var(--ingreso), #34d399); }
-        .dash-card.gastos::before { background: linear-gradient(90deg, var(--gasto), #f87171); }
-
-        .dash-card p { font-size: 12px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.5px; }
-        .dash-card h2 { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+        .panel h3 { font-size: 13px; font-weight: 700; margin-bottom: 12px; padding-bottom: 4px; border-bottom: 1px solid var(--border); color: #334155; }
         
-        /* Layout Grid */
-        .main-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 32px; margin-bottom: 32px; }
-        @media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; gap: 24px; } }
-        
-        .card { 
-            background: var(--bg-card); padding: 28px; border-radius: var(--radius-lg); 
-            border: 1px solid var(--border); box-shadow: var(--shadow-md); 
-        }
-        .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 24px; color: #0f172a; display: flex; align-items: center; gap: 10px; }
-        
-        /* Controles de Formulario Premium */
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 13px; color: #475569; }
+        /* Formularios Ajustados */
+        .form-group { margin-bottom: 8px; }
+        label { display: block; margin-bottom: 3px; font-weight: 600; font-size: 11px; color: #475569; }
         input, select { 
-            width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1; 
-            border-radius: var(--radius-sm); font-size: 14px; color: var(--text-main);
-            background-color: #fff; transition: var(--transition);
+            width: 100%; padding: 6px 8px; border: 1px solid var(--border); 
+            border-radius: 4px; font-size: 12px; color: var(--text-main); background-color: #fff;
         }
-        input:focus, select:focus { 
-            outline: none; border-color: var(--primary); 
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-        }
+        input:focus, select:focus { outline: none; border-color: var(--primary); }
         
-        /* Botonera Estilizada */
+        /* Botonera Compacta */
         button { 
-            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-            padding: 12px 20px; border: none; border-radius: var(--radius-sm); cursor: pointer; 
-            font-weight: 600; font-size: 13px; transition: var(--transition); 
+            display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+            padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; 
+            font-weight: 600; font-size: 12px;
         }
-        button.btn-block { width: 100%; padding: 14px; font-size: 14px; }
-        button.btn-primary { background: var(--primary); color: white; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); }
-        button.btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
-        button.btn-secondary { background: #f1f5f9; color: #334155; }
-        button.btn-secondary:hover { background: #e2e8f0; }
+        button.btn-block { width: 100%; padding: 8px; }
+        button.btn-primary { background: var(--primary); color: white; }
+        button.btn-secondary { background: #e2e8f0; color: #334155; }
+        button.btn-secondary:hover { background: #cbd5e1; }
         
-        /* Listas y Filas Modernas */
-        .scroll-list { max-height: 320px; overflow-y: auto; margin-top: 12px; padding-right: 4px; }
-        .scroll-list::-webkit-scrollbar { width: 6px; }
-        .scroll-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        /* Listas de Densidad Alta (Filas Chicas) */
+        .scroll-list { overflow-y: auto; padding-right: 2px; }
+        #lista-rubros { max-height: 220px; }
+        #lista-movimientos { max-height: 580px; } /* Más espacio vertical para el libro diario */
         
-        .row-item { 
+        .scroll-list::-webkit-scrollbar { width: 4px; }
+        .scroll-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        
+        .compact-row { 
             display: flex; justify-content: space-between; align-items: center; 
-            padding: 14px 16px; background: #f8fafc; border: 1px solid #f1f5f9;
-            border-radius: var(--radius-sm); margin-bottom: 8px; transition: var(--transition);
+            padding: 6px 8px; background: #f8fafc; border: 1px solid #e2e8f0;
+            border-radius: 4px; margin-bottom: 4px; font-size: 12px;
         }
-        .row-item:hover { background: #f1f5f9; border-color: #e2e8f0; transform: translateX(2px); }
+        .compact-row:hover { background: #f1f5f9; }
         
-        /* Badges */
-        .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+        /* Micro Badges */
+        .badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
         .badge.gasto { background: var(--gasto-bg); color: var(--gasto); }
         .badge.ingreso { background: var(--ingreso-bg); color: var(--ingreso); }
         
-        /* Iconos de Acción */
-        .actions-cell { display: flex; gap: 6px; }
-        .btn-icon { background: #ffffff; color: var(--text-muted); padding: 8px; border-radius: 6px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); cursor: pointer; }
-        .btn-icon:hover { color: var(--text-main); background: #f8fafc; border-color: #cbd5e1; }
-        .btn-icon.danger:hover { background: var(--gasto-bg); color: var(--gasto); border-color: #fca5a5; }
+        .actions-wrapper { display: flex; gap: 2px; }
+        .btn-trigger { background: transparent; color: var(--text-muted); padding: 4px; border: none; cursor: pointer; border-radius: 3px; font-size: 11px; }
+        .btn-trigger:hover { background: #e2e8f0; color: var(--text-main); }
+        .btn-trigger.danger:hover { background: var(--gasto-bg); color: var(--gasto); }
         
-        /* Barra de Filtros Integrada */
-        .filter-group { display: flex; background: #f1f5f9; padding: 4px; border-radius: var(--radius-sm); gap: 4px; }
-        .filter-tab { background: transparent; color: var(--text-muted); padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; border: none; }
-        .filter-tab.active { background: white; color: var(--text-main); box-shadow: var(--shadow-sm); }
+        /* Filtros Alineados */
+        .filter-strip { display: flex; background: #e2e8f0; padding: 2px; border-radius: 4px; gap: 2px; }
+        .filter-tab { background: transparent; color: var(--text-muted); padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; }
+        .filter-tab.active { background: white; color: var(--text-main); }
         
-        /* Footer Toolbar */
-        .footer-panel { 
-            background: var(--bg-card); border: 1px solid var(--border); padding: 20px 24px; 
-            border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; 
+        /* Footer Toolbar Minimal */
+        footer { 
+            background: var(--bg-card); border: 1px solid var(--border); padding: 6px 14px; 
+            border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center; font-size: 11px;
         }
-        .backup-controls { display: flex; gap: 12px; align-items: center; }
-        input[type="file"] { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <header>
-        <h1>Finanzas<span>Pro</span></h1>
-        <div id="connection-status" class="badge ingreso" style="font-size: 11px; padding: 6px 12px; border-radius: 20px;">Entorno Seguro HTTPS</div>
+        <h1>Finanzas<span>Pro</span> <small style="font-weight:normal; color:var(--text-muted); font-size:11px;">v3.0</small></h1>
+        
+        <!-- Almacenamiento en una sola línea fluida -->
+        <div class="balance-strip">
+            <div class="balance-item">Balance: <b id="view-balance">$0,00</b></div>
+            <div style="width:1px; height:14px; background:var(--border);"></div>
+            <div class="balance-item">Ingresos: <b id="view-ingresos" style="color:var(--ingreso);">$0,00</b></div>
+            <div style="width:1px; height:14px; background:var(--border);"></div>
+            <div class="balance-item">Gastos: <b id="view-gastos" style="color:var(--gasto);">$0,00</b></div>
+        </div>
     </header>
     
-    <div class="dashboard-grid">
-        <div class="dash-card balance">
-            <p>Balance Neto</p>
-            <h2 id="view-balance">$0,00</h2>
-        </div>
-        <div class="dash-card ingresos">
-            <p>Total Ingresos</p>
-            <h2 id="view-ingresos" style="color: var(--ingreso);">$0,00</h2>
-        </div>
-        <div class="dash-card gastos">
-            <p>Total Gastos</p>
-            <h2 id="view-gastos" style="color: var(--gasto);">$0,00</h2>
-        </div>
-    </div>
-
-    <div class="main-grid">
-        <div class="card">
-            <h3>📁 Configuración de Rubros</h3>
+    <div class="workspace-grid">
+        <!-- Columna 1: Configuración de Rubros -->
+        <div class="panel">
+            <h3>📁 Rubros</h3>
             <div class="form-group">
-                <label for="rubro-nombre">Nombre de Categoría</label>
-                <input type="text" id="rubro-nombre" autocomplete="off" placeholder="Ej: Viáticos, Sueldo, Combustible...">
+                <label for="rubro-nombre">Nombre Rubro</label>
+                <input type="text" id="rubro-nombre" autocomplete="off" placeholder="Ej: Nafta...">
             </div>
             <div class="form-group">
-                <label for="rubro-tipo">Tipo de Operación</label>
+                <label for="rubro-tipo">Tipo</label>
                 <select id="rubro-tipo">
-                    <option value="gasto">Gasto (-)</option>
-                    <option value="ingreso">Ingreso (+)</option>
+                    <option value="gasto">Gasto</option>
+                    <option value="ingreso">Ingreso</option>
                 </select>
             </div>
             <input type="hidden" id="rubro-edit-id" value="">
             
-            <div style="display: flex; gap: 8px; margin-bottom: 24px;">
-                <button id="btn-guardar-rubro" class="btn-primary" style="flex: 1;">Guardar Categoría</button>
-                <button id="btn-cancelar-rubro" class="btn-secondary" style="display:none;">Cancelar</button>
+            <div style="display: flex; gap: 4px; margin-bottom: 10px;">
+                <button id="btn-guardar-rubro" class="btn-primary" style="flex:1;">Añadir</button>
+                <button id="btn-cancelar-rubro" class="btn-secondary" style="display:none;">X</button>
             </div>
-
-            <p style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Mis Rubros Activos</p>
+            
             <div class="scroll-list" id="lista-rubros"></div>
         </div>
 
-        <div class="card">
-            <h3>✍️ Asentar Nuevo Movimiento</h3>
+        <!-- Columna 2: Formulario de Carga Directa -->
+        <div class="panel">
+            <h3>✍️ Carga de Transacciones</h3>
             <div class="form-group">
-                <label for="mov-concepto">Concepto / Descripción</label>
-                <input type="text" id="mov-concepto" autocomplete="off" placeholder="Ej: Compra repuestos, Cobro certificado...">
+                <label for="mov-concepto">Concepto / Detalle</label>
+                <input type="text" id="mov-concepto" autocomplete="off" placeholder="Ej: Pago repuesto...">
             </div>
             <div class="form-group">
-                <label for="mov-monto">Importe Total ($)</label>
+                <label for="mov-monto">Monto ($)</label>
                 <input type="number" id="mov-monto" step="0.01" min="0.01" placeholder="0,00">
             </div>
             <div class="form-group">
-                <label for="mov-rubro">Asignar Categoría</label>
+                <label for="mov-rubro">Asignar Rubro</label>
                 <select id="mov-rubro"></select>
             </div>
-            <button id="btn-guardar-movimiento" class="btn-primary btn-block" style="background: #0f172a; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);">Registrar en Historial</button>
+            <button id="btn-guardar-movimiento" class="btn-primary btn-block" style="background:#0f172a; margin-top:4px;">Asentar Registro</button>
+        </div>
+
+        <!-- Columna 3: El Historial Contable Extendido -->
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border);">
+                <h3 style="margin-bottom:0; border-bottom:none;">📊 Libro de Movimientos</h3>
+                <div class="filter-strip">
+                    <button class="filter-tab active" id="filter-all">Todos</button>
+                    <button class="filter-tab" id="filter-gasto">Gastos</button>
+                    <button class="filter-tab" id="filter-ingreso">Ingresos</button>
+                </div>
+            </div>
+            <div class="scroll-list" id="lista-movimientos"></div>
         </div>
     </div>
 
-    <div class="card" style="margin-bottom: 32px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
-            <h3>📊 Libro de Movimientos Diario</h3>
-            <div class="filter-group">
-                <button class="filter-tab active" id="filter-all">Ver Todos</button>
-                <button class="filter-tab" id="filter-gasto">Solo Gastos</button>
-                <button class="filter-tab" id="filter-ingreso">Solo Ingresos</button>
-            </div>
+    <!-- Barra Inferior de utilidades -->
+    <footer>
+        <span style="color: var(--text-muted);" id="db-status">DB Local Sincronizada (Brave OK)</span>
+        <div class="actions-wrapper">
+            <button class="btn-secondary" onclick="exportarBackup()" style="padding: 4px 8px; font-size:11px;">📥 Exportar</button>
+            <button class="btn-secondary" onclick="document.getElementById('file-import').click()" style="padding: 4px 8px; font-size:11px;">📤 Importar</button>
+            <input type="file" id="file-import" accept=".json" onchange="importarBackup(event)">
         </div>
-        <div id="lista-movimientos" style="max-height: 480px; overflow-y
+    </footer>
+</div>
+
+<script>
+    let storageDisponible = true;
+    try {
+        localStorage.setItem('__brve__', '1');
+        localStorage.removeItem('__brve__');
+    } catch (e) {
+        storageDisponible = false;
+        document.getElementById('db-status').textContent = "Modo Volátil (Shields Bloqueante)";
+    }
+
+    let DB = {
+        nid: 1,
+        rubros: [
+            { id: 1, nombre: 'Sueldo', tipo: 'ingreso' },
+            { id: 2, nombre: 'Supermercado', tipo: 'gasto' },
+            { id: 3, nombre: 'Servicios', tipo: 'gasto' }
+        ],
+        movimientos: []
+    };
+
+    const SKEY = 'finanzas-pro-compact-v3';
+    let filtroActual = 'all';
+
+    window.onload = function() {
+        if (storageDisponible && localStorage.getItem(SKEY)) {
+            try { DB = JSON.parse(localStorage.getItem(SKEY)); } catch(e) {}
+        } else {
+            DB.nid = 4;
+            save();
+        }
+        
+        document.getElementById('btn-guardar-rubro').addEventListener('click', guardarRubro);
+        document.getElementById('btn-cancelar-rubro').addEventListener('click', cancelarEdicionRubro);
+        document.getElementById('btn-guardar-movimiento').addEventListener('click', guardarMovimiento);
+        
+        document.getElementById('filter-all').addEventListener('click', () => setFiltro('all'));
+        document.getElementById('filter-gasto').addEventListener('click', () => setFiltro('gasto'));
+        document.getElementById('filter-ingreso').addEventListener('click', () => setFiltro('ingreso'));
+
+        render();
+    };
+
+    function save() {
+        if (storageDisponible) localStorage.setItem(SKEY, JSON.stringify(DB));
+    }
+
+    function guardarRubro() {
+        const nombreInput = document.getElementById('rubro-nombre');
+        const tipoSelect = document.getElementById('rubro-tipo');
+        const editIdInput = document.getElementById('rubro-edit-id');
+        const nombre = nombreInput.value.trim();
+        if (!nombre) return;
+
+        if (editIdInput.value) {
+            const rubro = DB.rubros.find(r => r.id == editIdInput.value);
+            if (rubro) { rubro.nombre = nombre; rubro.tipo = tipoSelect.value; }
+            document.getElementById('btn-guardar-rubro').textContent = 'Añadir';
+            document.getElementById('btn-cancelar-rubro').style.display = 'none';
+            editIdInput.value = '';
+        } else {
+            DB.rubros.push({ id: DB.nid++, nombre: nombre, tipo: tipoSelect.value });
+        }
+        nombreInput.value = '';
+        save(); render();
+    }
+
+    function editarRubro(id) {
+        const rubro = DB.rubros.find(r => r.id == id);
+        if (!rubro) return;
+        document.getElementById('rubro-nombre').value = rubro.nombre;
+        document.getElementById('rubro-tipo').value = rubro.tipo;
+        document.getElementById('rubro-edit-id').value = rubro.id;
+        document.getElementById('btn-guardar-rubro').textContent = 'Actualizar';
+        document.getElementById('btn-cancelar-rubro').style.display = 'inline-flex';
+    }
+
+    function eliminarRubro(id) {
+        if (!confirm('¿Eliminar rubro?')) return;
+        DB.rubros = DB.rubros.filter(r => r.id != id);
+        save(); render();
+    }
+
+    function guardarMovimiento() {
+        const conceptoInput = document.getElementById('mov-concepto');
+        const montoInput = document.getElementById('mov-monto');
+        const rubroSelect = document.getElementById('mov-rubro');
+        const monto = parseFloat(montoInput.value);
+        const rubroId = parseInt(rubroSelect.value);
+
+        if (isNaN(monto) || monto <= 0 || isNaN(rubroId)) return alert('Verifique los datos de carga.');
+
+        DB.movimientos.push({
+            id: DB.nid++,
+            concepto: conceptoInput.value.trim() || 'General',
+            monto: monto,
+            rubroId: rubroId,
+            fecha: new Date().toLocaleDateString()
+        });
+
+        conceptoInput.value = ''; montoInput.value = '';
+        save(); render();
+    }
+
+    function eliminarMovimiento(id) {
+        if (!confirm('¿Remover asiento?')) return;
+        DB.movimientos = DB.movimientos.filter(m => m.id != id);
+        save(); render();
+    }
+
+    function exportarBackup() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `backup_contable_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click(); downloadAnchor.remove();
+    }
+
+    function importarBackup(event) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            try {
+                const parsed = JSON.parse(reader.result);
+                if (parsed.rubros && parsed.movimientos) {
+                    DB = parsed; save(); render();
+                    alert('Base sincronizada.');
+                }
+            } catch(e) { alert('Formarto no válido.'); }
+        };
+        if(event.target.files[0]) reader.readAsText(event.target.files[0]);
+        event.target.value = '';
+    }
+
+    function setFiltro(tipo) {
+        filtroActual = tipo;
+        document.querySelectorAll('.filter-tab').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`filter-${tipo}`).classList.add('active');
+        render();
+    }
+
+    function formatMoneda(valor) {
+        return '$' + valor.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    }
+
+    function render() {
+        // 1. Render Rubros activos
+        const listaRubros = document.getElementById('lista-rubros');
+        listaRubros.innerHTML = '';
+        DB.rubros.forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'compact-row';
+            div.innerHTML = `
+                <span><strong>${r.nombre}</strong> <span class="badge ${r.tipo}">${r.tipo[0]}</span></span>
+                <div class="actions-wrapper">
+                    <button class="btn-trigger edit-b">✏️</button>
+                    <button class="btn-trigger danger del-b">🗑️</button>
+                </div>
+            `;
+            div.querySelector('.edit-b').addEventListener('click', () => editarRubro(r.id));
+            div.querySelector('.del-b').addEventListener('click', () => eliminarRubro(r.id));
+            listaRubros.appendChild(div);
+        });
+
+        // 2. Render Selector de rubro
+        const rubroSelect = document.getElementById('mov-rubro');
+        rubroSelect.innerHTML = '';
+        DB.rubros.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            opt.textContent = `${r.nombre} (${r.tipo[0].toUpperCase()})`;
+            rubroSelect.appendChild(opt);
+        });
+
+        // 3. Render Historial y sumas
+        const listaMovimientos = document.getElementById('lista-movimientos');
+        listaMovimientos.innerHTML = '';
+        let tIngresos = 0, tGastos = 0;
+
+        DB.movimientos.forEach(m => {
+            const rubro = DB.rubros.find(r => r.id === m.rubroId);
+            const tipo = rubro ? rubro.tipo : 'gasto';
+            if (tipo === 'ingreso') tIngresos += m.monto; else tGastos += m.monto;
+        });
+
+        const filtrados = DB.movimientos.filter(m => {
+            if (filtroActual === 'all') return true;
+            const rubro = DB.rubros.find(r => r.id === m.rubroId);
+            return (rubro ? rubro.tipo : 'gasto') === filtroActual;
+        });
+
+        if (filtrados.length === 0) {
+            listaMovimientos.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Sin asientos.</div>`;
+        } else {
+            [...filtrados].reverse().forEach(m => {
+                const rubro = DB.rubros.find(r => r.id === m.rubroId);
+                const tipo = rubro ? rubro.tipo : 'gasto';
+                const nRubro = rubro ? rubro.nombre : 'S/R';
+
+                const div = document.createElement('div');
+                div.className = 'compact-row';
+                div.innerHTML = `
+                    <div>
+                        <strong style="color:#0f172a;">${m.concepto}</strong> 
+                        <span style="color:var(--text-muted); font-size:10px; margin-left:4px;">${m.fecha}</span>
+                        <span class="badge ${tipo}" style="margin-left:4px;">${nRubro}</span>
+                    </div>
+                    <div class="actions-wrapper" style="align-items:center;">
+                        <span style="font-weight:700; margin-right:6px; color:var(--${tipo})">
+                            ${tipo === 'gasto' ? '-' : '+'}${formatMoneda(m.monto)}
+                        </span>
+                        <button class="btn-trigger danger del-m">🗑️</button>
+                    </div>
+                `;
+                div.querySelector('.del-m').addEventListener('click', () => eliminarMovimiento(m.id));
+                listaMovimientos.appendChild(div);
+            });
+        }
+
+        const balanceTotal = tIngresos - tGastos;
+        document.getElementById('view-ingresos').textContent = formatMoneda(tIngresos);
+        document.getElementById('view-gastos').textContent = formatMoneda(tGastos);
+        const bEl = document.getElementById('view-balance');
+        bEl.textContent = formatMoneda(balanceTotal);
+        bEl.style.color = balanceTotal >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
+    }
+
+    function cancelarEdicionRubro() {
+        document.getElementById('rubro-nombre').value = '';
+        document.getElementById('rubro-edit-id').value = '';
+        document.getElementById('btn-guardar-rubro').textContent = 'Añadir';
+        document.getElementById('btn-cancelar-rubro').style.display = 'none';
+    }
+</script>
+</body>
+</html>
