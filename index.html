@@ -50,7 +50,6 @@
         
         .balance-strip { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         
-        /* Contenedores de grupos en barra superior */
         .strip-group {
             display: flex; align-items: center; gap: 10px; padding: 4px 10px; background: #f8fafc; border: 1px solid var(--border); border-radius: 4px;
         }
@@ -97,10 +96,16 @@
         button.btn-secondary:hover { background: #cbd5e1; }
         
         .date-filter-strip {
-            display: flex; gap: 4px; background: #f8fafc; padding: 6px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 8px; flex-shrink: 0;
+            display: flex; gap: 4px; background: #f8fafc; padding: 6px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 4px; flex-shrink: 0;
         }
         .date-filter-group { flex: 1; }
         .date-filter-group input { padding: 3px 6px; font-size: 11px; }
+
+        /* Estilos del nuevo totalizador reactivo filtrado */
+        .live-counter-strip {
+            display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 8px; font-size: 11px; font-weight: 600; flex-shrink: 0;
+        }
+        .live-counter-item { display: flex; gap: 4px; align-items: center; }
 
         .scroll-list { overflow-y: auto; flex-grow: 1; padding-right: 2px; min-height: 0; }
         .scroll-list::-webkit-scrollbar { width: 4px; }
@@ -162,10 +167,9 @@
 
 <div class="container">
     <header>
-        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v10.0 Enterprise-Ledger</small></h1>
+        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v11.0 Enterprise-Ledger</small></h1>
         
         <div class="balance-strip">
-            <!-- GRUPO 1: MÉTRICAS DE CONTROL PRESUPUESTARIO (MES ACTUAL) -->
             <div class="strip-group">
                 <span class="strip-group-title">🎯 Presupuesto</span>
                 <div class="balance-item">Límites: <b id="view-budget-general" style="color: var(--primary);">$0,00</b></div>
@@ -173,7 +177,6 @@
                 <div class="balance-item">Restan: <b id="view-budget-restante" style="color: var(--ingreso);">$0,00</b></div>
             </div>
 
-            <!-- GRUPO 2: TENENCIAS REALES Y ACTIVOS LÍQUIDOS (CORREGIDO) -->
             <div class="strip-group">
                 <span class="strip-group-title">💰 Tenencias</span>
                 <div class="balance-item">Neto: <b id="view-balance">$0,00</b></div>
@@ -309,6 +312,12 @@
                 </div>
             </div>
 
+            <div class="live-counter-strip" id="live-filter-counter">
+                <div class="live-counter-item">∑ Ingresos: <span id="live-total-ingresos" style="color:var(--ingreso); font-weight:700;">$0,00</span></div>
+                <div class="live-counter-item">∑ Gastos: <span id="live-total-gastos" style="color:var(--gasto); font-weight:700;">$0,00</span></div>
+                <div class="live-counter-item">Subneto: <span id="live-total-neto" style="font-weight:700;">$0,00</span></div>
+            </div>
+
             <div class="scroll-list" id="lista-movimientos"></div>
         </div>
 
@@ -321,7 +330,7 @@
     <footer>
         <div style="display:flex; align-items:center; gap:8px;">
             <span style="color: var(--text-muted);" id="db-status">Almacenamiento Local Activo</span>
-            <span id="storage-warning" class="toast-banner">⚠️ MEMORIA COLESIONADA / LLENA</span>
+            <span id="storage-warning" class="toast-banner">⚠️ MEMORIA COLISIONADA / LLENA</span>
             <span id="pwa-update-toast" class="pwa-update-banner" onclick="forzarRecargaPWA()">🔄 Nueva versión lista. Actualizar</span>
         </div>
         <div class="actions-wrapper">
@@ -335,11 +344,11 @@
 <div id="contenedor-impresion-pwa"></div>
 
 <script>
-    const SKEY = 'finanzas-pro-compact-v10'; 
+    const SKEY = 'finanzas-pro-compact-v11'; 
     const ITEMS_PER_PAGE = 40;
 
     let DB = {
-        version: 10,
+        version: 11,
         nid: 1,
         rubros: [
             { id: 1, nombre: 'Sueldo', tipo: 'ingreso' },
@@ -355,16 +364,24 @@
     let currentLimitMovimientos = ITEMS_PER_PAGE;
 
     window.onload = function() {
-        const legacyKeyV9 = 'finanzas-pro-compact-v9';
-        let rawData = localStorage.getItem(SKEY) || localStorage.getItem(legacyKeyV9);
+        const legacyKeys = ['finanzas-pro-compact-v10', 'finanzas-pro-compact-v9'];
+        let rawData = localStorage.getItem(SKEY);
+        
+        if(!rawData) {
+            for (let oldKey of legacyKeys) {
+                rawData = localStorage.getItem(oldKey);
+                if(rawData) {
+                    localStorage.removeItem(oldKey);
+                    break;
+                }
+            }
+        }
 
         if (rawData) {
             try { 
                 let parsed = JSON.parse(rawData);
                 DB = ejecutarMigracionesInternas(parsed);
-                if(localStorage.getItem(legacyKeyV9) && SKEY !== legacyKeyV9) {
-                    localStorage.removeItem(legacyKeyV9);
-                }
+                saveImmediate();
             } catch(e) {
                 console.error("Error crítico en el parseo o migración de datos:", e);
             }
@@ -393,10 +410,7 @@
     function ejecutarMigracionesInternas(data) {
         if (!data.version) data.version = 8; 
         
-        if (data.version === 8) {
-            data.presupuestosHistoricos = data.presupuestosHistoricos || {};
-            data.version = 9;
-        }
+        if (data.version === 8) { data.presupuestosHistoricos = data.presupuestosHistoricos || {}; data.version = 9; }
         if (data.version === 9) {
             data.version = 10;
             data.movimientos.forEach(m => {
@@ -404,6 +418,7 @@
                 if (m.destino === undefined) m.destino = null;
             });
         }
+        if (data.version === 10) { data.version = 11; }
         return data;
     }
 
@@ -419,7 +434,6 @@
         } catch (error) {
             if (error.name === 'QuotaExceededError' || error.code === 22) {
                 document.getElementById('storage-warning').style.display = 'inline-block';
-                console.error("Alerta Crítica: El almacenamiento local está saturado o bloqueado.");
             }
         }
     }
@@ -577,10 +591,8 @@
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB, null, 2));
         const downloadAnchor = document.createElement('a');
         const ahora = new Date();
-        
         const fechaSello = ahora.toISOString().slice(0,10);
         const horaSello = ahora.toTimeString().slice(0,8).replace(/:/g, '-');
-        
         downloadAnchor.setAttribute("href", dataStr); 
         downloadAnchor.setAttribute("download", `backup_contable_${fechaSello}_${horaSello}.json`);
         document.body.appendChild(downloadAnchor); 
@@ -598,7 +610,7 @@
                         DB = ejecutarMigracionesInternas(parsed);
                         if(DB.movimientos.length > 0) DB.nid = Math.max(...DB.movimientos.map(m => m.id), ...DB.rubros.map(r => r.id)) + 1;
                         document.getElementById('cfg-debito1').value = DB.bancos.debito1; document.getElementById('cfg-debito2').value = DB.bancos.debito2;
-                        saveImmediate(); resetPaginacion(); render(); alert('Base de datos sincronizada y migrada.');
+                        saveImmediate(); resetPaginacion(); render(); alert('Base de datos sincronizada.');
                     }
                 }
             } catch(e) { alert('Error en la importación de datos.'); }
@@ -620,9 +632,7 @@
         }).catch(() => {});
     }
 
-    function forzarRecargaPWA() {
-        window.location.reload();
-    }
+    function forzarRecargaPWA() { window.location.reload(); }
 
     function formatMoneda(valor) { return '$' + valor.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
 
@@ -759,7 +769,27 @@
         `;
         filtroSelect.value = fFiltroAnterior;
 
+        // --- CÓMPUTO Y RENDERIZADO DEL LIBRO DIARIO CON TOTALIZADOR REACTIVO EN CALIENTE ---
         const filtrados = obtenerMovimientosFiltrados();
+        
+        let sumFiltradoIngresos = 0;
+        let sumFiltradoGastos = 0;
+        
+        filtrados.forEach(m => {
+            const rubro = DB.rubros.find(r => r.id === m.rubroId);
+            const tipo = m.rubroId === 0 ? 'transferencia' : (rubro ? rubro.tipo : 'gasto');
+            if(tipo === 'ingreso') sumFiltradoIngresos += m.monto;
+            else if(tipo === 'gasto') sumFiltradoGastos += m.monto;
+        });
+
+        document.getElementById('live-total-ingresos').textContent = formatMoneda(sumFiltradoIngresos);
+        document.getElementById('live-total-gastos').textContent = formatMoneda(sumFiltradoGastos);
+        
+        const subNetoFiltrado = sumFiltradoIngresos - sumFiltradoGastos;
+        const elLiveNeto = document.getElementById('live-total-neto');
+        elLiveNeto.textContent = formatMoneda(subNetoFiltrado);
+        elLiveNeto.style.color = subNetoFiltrado >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
+
         const listaMovimientos = document.getElementById('lista-movimientos'); 
         listaMovimientos.innerHTML = '';
         
