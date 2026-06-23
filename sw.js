@@ -1,5 +1,5 @@
-// Firma de versión para control de ciclo de vida de la PWA (v11.0)
-const CACHE_NAME = 'finanzas-pro-cache-v11.0';
+// Firma de versión para control de ciclo de vida de la PWA (v12.0 NETWORK-FIRST)
+const CACHE_NAME = 'finanzas-pro-cache-v12.0';
 const ASSETS = [
   './',
   './index.html',
