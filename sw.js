@@ -1,5 +1,5 @@
-// Firma de versión para control de ciclo de vida de la PWA (v12.03 NETWORK-FIRST BLINDADO)
-const CACHE_NAME = 'finanzas-pro-cache-v12.03';
+// Firma de versión para control de ciclo de vida de la PWA (v12.02 NETWORK-FIRST BLINDADO)
+const CACHE_NAME = 'finanzas-pro-cache-v12.02';
 const ASSETS = [
   './',
   './index.html',
@@ -37,6 +37,7 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+// ESTRATEGIA NETWORK-FIRST BLINDADA MEDIANTE CONSTRUCTOR DE REQUEST CON CLONACIÓN DE CONTEXTO
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
 
