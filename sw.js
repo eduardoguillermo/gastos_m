@@ -1,5 +1,5 @@
-// Firma de versión para control de ciclo de vida de la PWA (v12.01 NETWORK-FIRST BLINDADO)
-const CACHE_NAME = 'finanzas-pro-cache-v12.01';
+// Firma de versión para control de ciclo de vida de la PWA (v12.02 NETWORK-FIRST BLINDADO)
+const CACHE_NAME = 'finanzas-pro-cache-v12.02';
 const ASSETS = [
   './',
   './index.html',
@@ -43,10 +43,8 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(e.request.url);
   if (url.origin === self.location.origin) {
-    // Inyectamos el parámetro rompe-caché usando la API nativa de URL sin alterar las cabeceras HTTP
     url.searchParams.set('v', Date.now().toString());
 
-    // Clonamos las propiedades de seguridad de la petición original inyectando no-store nativo
     const networkRequest = new Request(url.toString(), {
       method: e.request.method,
       headers: e.request.headers,
@@ -66,7 +64,6 @@ self.addEventListener('fetch', (e) => {
           return res;
         })
         .catch(() => {
-          // Fallback offline estricto: si la red falla, se sirve del almacenamiento interno
           return caches.match(e.request);
         })
     );
