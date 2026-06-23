@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FinanzasPro - Custom Wallets</title>
+    
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/584/584026.png">
+
     <style>
         :root {
             --bg-main: #f1f5f9;
@@ -218,7 +225,6 @@
         document.getElementById('db-status').textContent = "Modo Volátil (Brave Shields)";
     }
 
-    // Instancia de base con soporte para etiquetas de banco editables
     let DB = {
         nid: 1,
         rubros: [
@@ -227,10 +233,7 @@
             { id: 3, nombre: 'Servicios', tipo: 'gasto' }
         ],
         movimientos: [],
-        bancos: {
-            debito1: 'Banco 1',
-            debito2: 'Banco 2'
-        }
+        bancos: { debito1: 'Banco 1', debito2: 'Banco 2' }
     };
 
     const SKEY = 'finanzas-pro-compact-v6';
@@ -252,7 +255,6 @@
         document.getElementById('btn-guardar-bancos').addEventListener('click', guardarNombresBancos);
         document.getElementById('filtro-avanzado').addEventListener('change', render);
 
-        // Precargar configuración de inputs de bancos
         document.getElementById('cfg-debito1').value = DB.bancos.debito1;
         document.getElementById('cfg-debito2').value = DB.bancos.debito2;
 
@@ -263,15 +265,21 @@
         if (storageDisponible) localStorage.setItem(SKEY, JSON.stringify(DB));
     }
 
+    // --- REGISTRO AUTOMÁTICO DE SERVICE WORKER PARA PWA ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('PWA Service Worker registrado con éxito', reg))
+                .catch(err => console.error('Fallo al registrar Service Worker de PWA', err));
+        });
+    }
+
     function guardarNombresBancos() {
         const d1 = document.getElementById('cfg-debito1').value.trim();
         const d2 = document.getElementById('cfg-debito2').value.trim();
-        
         DB.bancos.debito1 = d1 || 'Banco 1';
         DB.bancos.debito2 = d2 || 'Banco 2';
-        
-        save();
-        render();
+        save(); render();
     }
 
     function guardarRubro() {
@@ -401,11 +409,9 @@
     function render() {
         DB.rubros.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-        // Sincronizar etiquetas de texto en cabecera superior
         document.getElementById('label-hdr-debito1').textContent = DB.bancos.debito1;
         document.getElementById('label-hdr-debito2').textContent = DB.bancos.debito2;
 
-        // 1. Render Rubros
         const listaRubros = document.getElementById('lista-rubros');
         listaRubros.innerHTML = '';
         DB.rubros.forEach(r => {
@@ -423,7 +429,6 @@
             listaRubros.appendChild(div);
         });
 
-        // 2. Render Selector de Rubros
         const rubroSelect = document.getElementById('mov-rubro');
         rubroSelect.innerHTML = '';
         DB.rubros.forEach(r => {
@@ -433,7 +438,6 @@
             rubroSelect.appendChild(opt);
         });
 
-        // Sincronizar dinámicamente el selector del formulario de carga
         const origenSelect = document.getElementById('mov-origen');
         origenSelect.innerHTML = `
             <option value="efectivo">💵 Efectivo</option>
@@ -441,7 +445,6 @@
             <option value="debito2">💳 ${DB.bancos.debito2}</option>
         `;
 
-        // Sincronizar dinámicamente las opciones del selector de filtros
         const filtroSelect = document.getElementById('filtro-avanzado');
         const fFiltroAnterior = filtroSelect.value || 'all';
         filtroSelect.innerHTML = `
@@ -454,7 +457,6 @@
         `;
         filtroSelect.value = fFiltroAnterior;
 
-        // 3. Procesamiento del Libro Diario
         const listaMovimientos = document.getElementById('lista-movimientos');
         listaMovimientos.innerHTML = '';
         
@@ -508,7 +510,6 @@
                 const tipo = rubro ? rubro.tipo : 'gasto';
                 const nRubro = rubro ? rubro.nombre : 'S/R';
                 
-                // Mapear el origen a la etiqueta personalizada corta del banco
                 let tagOrigen = 'EFEC';
                 if (m.origen === 'debito1') tagOrigen = DB.bancos.debito1;
                 if (m.origen === 'debito2') tagOrigen = DB.bancos.debito2;
@@ -534,7 +535,6 @@
             });
         }
 
-        // 4. Render Reporte Mensual
         const listaReporte = document.getElementById('lista-reporte-mensual');
         listaReporte.innerHTML = '';
         const mesesOrdenados = Object.keys(mapaMensual).sort().reverse();
@@ -561,7 +561,6 @@
             });
         }
 
-        // Renderizado de balances generales
         document.getElementById('view-ingresos').textContent = formatMoneda(tIngresos);
         document.getElementById('view-gastos').textContent = formatMoneda(tGastos);
         
