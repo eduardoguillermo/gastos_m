@@ -340,7 +340,6 @@
     let currentLimitMovimientos = ITEMS_PER_PAGE;
 
     window.onload = function() {
-        // --- MOTOR DE MIGRACIÓN SECUENCIAL DE BASE DE DATOS ---
         const legacyKeyV9 = 'finanzas-pro-compact-v9';
         let rawData = localStorage.getItem(SKEY) || localStorage.getItem(legacyKeyV9);
 
@@ -348,7 +347,6 @@
             try { 
                 let parsed = JSON.parse(rawData);
                 DB = ejecutarMigracionesInternas(parsed);
-                // Limpiar storage anterior si migró de v9
                 if(localStorage.getItem(legacyKeyV9) && SKEY !== legacyKeyV9) {
                     localStorage.removeItem(legacyKeyV9);
                 }
@@ -386,7 +384,6 @@
         }
         if (data.version === 9) {
             data.version = 10;
-            // Estructuraciones de campos calculados por seguridad de tipos
             data.movimientos.forEach(m => {
                 if (!m.origen) m.origen = 'efectivo';
                 if (m.destino === undefined) m.destino = null;
@@ -395,7 +392,6 @@
         return data;
     }
 
-    // --- STRATEGY: ASYNC DEBOUNCED WRITE CON FAIL-SAFE CUOTA ---
     function save() {
         if (tSaveDebounce) clearTimeout(tSaveDebounce);
         tSaveDebounce = setTimeout(saveImmediate, 300);
@@ -457,7 +453,6 @@
         }
     }
 
-    // --- RECURSION DE ARRASTRE SEGURO DE HISTORIAL ---
     function obtenerLimiteHistoricoRubro(claveMes, rubroId) {
         if (!DB.presupuestosHistoricos[claveMes]) {
             const partes = claveMes.split('-');
@@ -596,7 +591,6 @@
         if(event.target.files[0]) reader.readAsText(event.target.files[0]);
     }
 
-    // --- INTERCEPTOR LOGIC FOR PWA RELOADS & UPDATES ---
     if ('serviceWorker' in navigator) {
         const repoPath = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
         navigator.serviceWorker.register(repoPath + 'sw.js', { scope: repoPath }).then(reg => {
@@ -674,7 +668,6 @@
         window.print();
     }
 
-    // --- PIPELINE DE CONTROL COMPILADO (STATE -> RENDER CONTROLLER) ---
     function calcularMetricasGlobales() {
         let metricas = {
             tIngresos: 0, tGastos: 0, balEfectivo: 0, balDebito1: 0, balDebito2: 0, mapaMensual: {}
@@ -714,7 +707,6 @@
         const claveMesVisorRubros = document.getElementById('rubro-mes-visor').value;
         const coreMetricas = calcularMetricasGlobales();
 
-        // 1. Render Rubros Panel
         DB.rubros.sort((a, b) => a.nombre.localeCompare(b.nombre));
         const listaRubros = document.getElementById('lista-rubros');
         listaRubros.innerHTML = '';
@@ -729,7 +721,6 @@
             listaRubros.appendChild(div);
         });
 
-        // Sync inputs del Formulario de Carga
         const rubroSelect = document.getElementById('mov-rubro'); rubroSelect.innerHTML = '';
         DB.rubros.forEach(r => {
             const opt = document.createElement('option'); opt.value = r.id; opt.textContent = `${r.nombre} (${r.tipo[0].toUpperCase()})`; rubroSelect.appendChild(opt);
@@ -753,7 +744,6 @@
         `;
         filtroSelect.value = fFiltroAnterior;
 
-        // 2. Render Libro Diario con Virtualización Paginada (Evita Layout Thrashing)
         const filtrados = obtenerMovimientosFiltrados();
         const listaMovimientos = document.getElementById('lista-movimientos'); 
         listaMovimientos.innerHTML = '';
@@ -788,7 +778,6 @@
             }
         }
 
-        // 3. Render Reporte Mensual Matricial
         const listaReporte = document.getElementById('lista-reporte-mensual'); listaReporte.innerHTML = '';
         const mesesOrdenados = Object.keys(coreMetricas.mapaMensual).sort().reverse();
         
@@ -832,7 +821,7 @@
             div.innerHTML = `
                 <div class="month-header">${datos.etiqueta}</div>
                 <div class="month-data"><span>Total Presupuestado Objetivos:</span> <span style="font-weight:600; color:var(--primary);">${formatMoneda(totalPresupuestadoDelMes)}</span></div>
-                <div class="month-data"><span>Gastos Realizados:</span> <span style="color:var(--gasto); font-weight:600;">-{formatMoneda(datos.gastos)}</span></div>
+                <div class="month-data"><span>Gastos Realizados:</span> <span style="color:var(--gasto); font-weight:600;">-${formatMoneda(datos.gastos)}</span></div>
                 <div class="month-data" style="margin-top:4px; padding-top:4px; border-top:1px solid #e2e8f0; font-weight:700;">
                     <span>Neto Comercial (I-G):</span> <span style="color:${datos.ingresos - datos.gastos >= 0 ? 'var(--ingreso)' : 'var(--gasto)'};">${formatMoneda(datos.ingresos - datos.gastos)}</span>
                 </div>
@@ -845,7 +834,6 @@
             DB.rubros.forEach(rub => { if(rub.tipo === 'gasto') sumaPresupuestosMesActualBarra += obtenerLimiteHistoricoRubro(claveMesActualSist, rub.id); });
         }
         
-        // 4. Inyección del Estado Financiero en la Barra Superior
         const elBgral = document.getElementById('view-budget-general');
         elBgral.textContent = `${formatMoneda(totalGastadoMesActualBarra)} / ${formatMoneda(sumaPresupuestosMesActualBarra)}`;
         elBgral.style.color = totalGastadoMesActualBarra > sumaPresupuestosMesActualBarra ? 'var(--gasto)' : 'var(--primary)';
