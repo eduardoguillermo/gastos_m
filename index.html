@@ -51,7 +51,7 @@
         .card { background: var(--bg-card); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
         .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 20px; color: #0f172a; display: flex; align-items: center; gap: 8px; }
         
-        /* Inputs con Autocomplete deshabilitado por el navegador */
+        /* Inputs con Autocomplete deshabilitado */
         .form-group { margin-bottom: 16px; }
         label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #475569; }
         input, select { 
@@ -73,7 +73,7 @@
         button.btn-secondary { background: #f1f5f9; color: #334155; }
         button.btn-secondary:hover { background: #e2e8f0; }
         
-        /* Listas Modernas */
+        /* Listas */
         .scroll-list { max-height: 280px; overflow-y: auto; margin-top: 10px; padding-right: 4px; }
         .scroll-list::-webkit-scrollbar { width: 6px; }
         .scroll-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -90,7 +90,7 @@
         .badge.ingreso { background: var(--ingreso-bg); color: var(--ingreso); }
         
         .actions-cell { display: flex; gap: 4px; }
-        .btn-icon { background: transparent; color: var(--text-muted); padding: 6px; border-radius: 4px; }
+        .btn-icon { background: transparent; color: var(--text-muted); padding: 6px; border-radius: 4px; border: none; cursor: pointer; }
         .btn-icon:hover { background: #f1f5f9; color: var(--text-main); }
         .btn-icon.danger:hover { background: var(--gasto-bg); color: var(--gasto); }
         
@@ -99,7 +99,7 @@
         .filter-tab { background: transparent; color: var(--text-muted); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; }
         .filter-tab.active { background: white; color: var(--text-main); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         
-        /* Footer / Backup Panel */
+        /* Footer Panel */
         .footer-panel { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
         .backup-controls { display: flex; gap: 10px; align-items: center; }
         input[type="file"] { display: none; }
@@ -194,7 +194,6 @@
 </div>
 
 <script>
-    // --- EVALUACIÓN DE ENTORNO ---
     let storageDisponible = true;
     try {
         localStorage.setItem('__brave_probe__', '1');
@@ -206,7 +205,6 @@
         document.getElementById('connection-status').style.color = "#ea580c";
     }
 
-    // --- INSTANCIA DE MEMORIA BASE ---
     let DB = {
         nid: 1,
         rubros: [
@@ -232,7 +230,6 @@
             save();
         }
         
-        // Listeners Seguros
         document.getElementById('btn-guardar-rubro').addEventListener('click', guardarRubro);
         document.getElementById('btn-cancelar-rubro').addEventListener('click', cancelarEdicionRubro);
         document.getElementById('btn-guardar-movimiento').addEventListener('click', guardarMovimiento);
@@ -254,7 +251,6 @@
         }
     }
 
-    // --- LOGICA GESTIÓN CATEGORÍAS (RUBROS) ---
     function guardarRubro() {
         const nombreInput = document.getElementById('rubro-nombre');
         const tipoSelect = document.getElementById('rubro-tipo');
@@ -273,7 +269,7 @@
                 rubro.tipo = tipo;
             }
             document.getElementById('btn-guardar-rubro').textContent = 'Agregar Categoría';
-            document.getElementById('btn-cancelar-rubro').style.style.display = 'none';
+            document.getElementById('btn-cancelar-rubro').style.display = 'none';
             editIdInput.value = '';
         } else {
             DB.rubros.push({ id: DB.nid++, nombre: nombre, tipo: tipo });
@@ -292,4 +288,185 @@
         document.getElementById('rubro-tipo').value = rubro.tipo;
         document.getElementById('rubro-edit-id').value = rubro.id;
         
-        document.getElementById('btn-guard
+        document.getElementById('btn-guardar-rubro').textContent = 'Actualizar';
+        document.getElementById('btn-cancelar-rubro').style.display = 'inline-flex';
+    }
+
+    function eliminarRubro(id) {
+        if (!confirm('¿Desea remover esta categoría? Los movimientos no se borrarán pero se desvincularán.')) return;
+        DB.rubros = DB.rubros.filter(r => r.id != id);
+        save();
+        render();
+    }
+
+    function guardarMovimiento() {
+        const conceptoInput = document.getElementById('mov-concepto');
+        const montoInput = document.getElementById('mov-monto');
+        const rubroSelect = document.getElementById('mov-rubro');
+
+        const concepto = conceptoInput.value.trim() || 'Operación general';
+        const monto = parseFloat(montoInput.value);
+        const rubroId = parseInt(rubroSelect.value);
+
+        if (isNaN(monto) || monto <= 0) return alert('Ingrese un importe válido numérico superior a 0.');
+        if (isNaN(rubroId)) return alert('Seleccione una categoría antes de asentar.');
+
+        DB.movimientos.push({
+            id: DB.nid++,
+            concepto: concepto,
+            monto: monto,
+            rubroId: rubroId,
+            fecha: new Date().toLocaleDateString()
+        });
+
+        conceptoInput.value = '';
+        montoInput.value = '';
+        save();
+        render();
+    }
+
+    function eliminarMovimiento(id) {
+        if (!confirm('¿Remover esta entrada de los libros contables?')) return;
+        DB.movimientos = DB.movimientos.filter(m => m.id != id);
+        save();
+        render();
+    }
+
+    function exportarBackup() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB, null, 2));
+        const downloadAnchor = document.createElement('a');
+        const fechaStr = new Date().toISOString().slice(0,10);
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `backup_finanzas_${fechaStr}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function importarBackup(event) {
+        const input = event.target;
+        const reader = new FileReader();
+        reader.onload = function() {
+            try {
+                const parsedData = JSON.parse(reader.result);
+                if (parsedData.rubros && parsedData.movimientos && parsedData.nid) {
+                    if (confirm('Se detectó una base de datos válida. ¿Desea cargarla?')) {
+                        DB = parsedData;
+                        save();
+                        render();
+                        alert('Copia de seguridad importada correctamente.');
+                    }
+                } else {
+                    alert('El archivo no tiene el formato compatible.');
+                }
+            } catch(e) {
+                alert('Error leyendo el archivo JSON.');
+            }
+        };
+        if(input.files[0]) reader.readAsText(input.files[0]);
+        input.value = '';
+    }
+
+    function setFiltro(tipo) {
+        filtroActual = tipo;
+        document.querySelectorAll('.filter-tab').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`filter-${tipo}`).classList.add('active');
+        render();
+    }
+
+    function formatMoneda(valor) {
+        return '$' + valor.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    }
+
+    function render() {
+        const listaRubros = document.getElementById('lista-rubros');
+        listaRubros.innerHTML = '';
+        DB.rubros.forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'row-item';
+            div.innerHTML = `
+                <span><strong>${r.nombre}</strong> <span class="badge ${r.tipo}">${r.tipo === 'gasto' ? 'Gasto' : 'Ingreso'}</span></span>
+                <div class="actions-cell">
+                    <button class="btn-icon edit-btn" title="Editar">✏️</button>
+                    <button class="btn-icon danger del-btn" title="Borrar">🗑️</button>
+                </div>
+            `;
+            div.querySelector('.edit-btn').addEventListener('click', () => editarRubro(r.id));
+            div.querySelector('.del-btn').addEventListener('click', () => eliminarRubro(r.id));
+            listaRubros.appendChild(div);
+        });
+
+        const rubroSelect = document.getElementById('mov-rubro');
+        rubroSelect.innerHTML = '';
+        DB.rubros.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            opt.textContent = `${r.nombre} (${r.tipo === 'gasto' ? 'Gasto' : 'Ingreso'})`;
+            rubroSelect.appendChild(opt);
+        });
+
+        const listaMovimientos = document.getElementById('lista-movimientos');
+        listaMovimientos.innerHTML = '';
+        
+        let totalIngresos = 0;
+        let totalGastos = 0;
+
+        DB.movimientos.forEach(m => {
+            const rubro = DB.rubros.find(r => r.id === m.rubroId);
+            const tipo = rubro ? rubro.tipo : 'gasto';
+            if (tipo === 'ingreso') totalIngresos += m.monto;
+            if (tipo === 'gasto') totalGastos += m.monto;
+        });
+
+        const filtrados = DB.movimientos.filter(m => {
+            if (filtroActual === 'all') return true;
+            const rubro = DB.rubros.find(r => r.id === m.rubroId);
+            return (rubro ? rubro.tipo : 'gasto') === filtroActual;
+        });
+
+        if (filtrados.length === 0) {
+            listaMovimientos.innerHTML = `<div style="text-align:center; padding:35px; color:var(--text-muted); font-size:13px;">No existen asientos registrados bajo esta vista.</div>`;
+        } else {
+            [...filtrados].reverse().forEach(m => {
+                const rubro = DB.rubros.find(r => r.id === m.rubroId);
+                const tipo = rubro ? rubro.tipo : 'gasto';
+                const nombreRubro = rubro ? rubro.nombre : 'Sin categoría';
+
+                const div = document.createElement('div');
+                div.className = 'row-item';
+                div.innerHTML = `
+                    <div>
+                        <strong style="font-size:14px; color:#0f172a;">${m.concepto}</strong> 
+                        <span style="color:var(--text-muted); font-size:11px; margin-left:6px;">${m.fecha}</span><br>
+                        <span class="badge ${tipo}" style="margin-top:4px;">${nombreRubro}</span>
+                    </div>
+                    <div class="actions-cell" style="align-items:center;">
+                        <span style="font-weight:700; font-size:15px; margin-right:10px; color:var(--${tipo})">
+                            ${tipo === 'gasto' ? '-' : '+'}${formatMoneda(m.monto)}
+                        </span>
+                        <button class="btn-icon danger del-m-btn">🗑️</button>
+                    </div>
+                `;
+                div.querySelector('.del-m-btn').addEventListener('click', () => eliminarMovimiento(m.id));
+                listaMovimientos.appendChild(div);
+            });
+        }
+
+        const balanceTotal = totalIngresos - totalGastos;
+        document.getElementById('view-ingresos').textContent = formatMoneda(totalIngresos);
+        document.getElementById('view-gastos').textContent = formatMoneda(totalGastos);
+        
+        const balanceEl = document.getElementById('view-balance');
+        balanceEl.textContent = formatMoneda(balanceTotal);
+        balanceEl.style.color = balanceTotal >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
+    }
+
+    function cancelarEdicionRubro() {
+        document.getElementById('rubro-nombre').value = '';
+        document.getElementById('rubro-edit-id').value = '';
+        document.getElementById('btn-guardar-rubro').textContent = 'Agregar Categoría';
+        document.getElementById('btn-cancelar-rubro').style.display = 'none';
+    }
+</script>
+</body>
+</html>
