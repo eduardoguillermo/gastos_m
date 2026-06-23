@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinanzasPro - Multi-Wallet Edition</title>
+    <title>FinanzasPro - Custom Wallets</title>
     <style>
         :root {
             --bg-main: #f1f5f9;
@@ -21,36 +21,19 @@
         
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
-        html, body {
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-        }
+        html, body { height: 100vh; width: 100vw; overflow: hidden; }
         
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: var(--bg-main); 
-            color: var(--text-main); 
-            padding: 8px;
-            font-size: 13px;
-            display: flex;
-            flex-direction: column;
+            background: var(--bg-main); color: var(--text-main); padding: 8px; font-size: 13px;
+            display: flex; flex-direction: column;
         }
         
-        .container { 
-            width: 100%; 
-            height: 100%;
-            max-width: 100%; 
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
+        .container { width: 100%; height: 100%; max-width: 100%; margin: 0; display: flex; flex-direction: column; gap: 8px; }
         
         header { 
             display: flex; justify-content: space-between; align-items: center; 
-            background: var(--bg-card); padding: 6px 12px;
-            border-radius: var(--radius); border: 1px solid var(--border);
+            background: var(--bg-card); padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--border);
             flex-shrink: 0; flex-wrap: wrap; gap: 8px;
         }
         header h1 { font-size: 13px; font-weight: 700; }
@@ -61,11 +44,7 @@
         .balance-item b { font-size: 13px; font-weight: 700; color: var(--text-main); }
         
         .workspace-grid { 
-            display: grid; 
-            grid-template-columns: 260px 260px 1fr 280px; 
-            gap: 8px; 
-            flex-grow: 1;
-            min-height: 0;
+            display: grid; grid-template-columns: 260px 260px 1fr 280px; gap: 8px; flex-grow: 1; min-height: 0;
         }
         @media (max-width: 1200px) { 
             .workspace-grid { grid-template-columns: 1fr; overflow-y: auto; } 
@@ -74,8 +53,7 @@
         
         .panel { 
             background: var(--bg-card); padding: 12px; border-radius: var(--radius); 
-            border: 1px solid var(--border); display: flex; flex-direction: column;
-            height: 100%; min-height: 0;
+            border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; min-height: 0;
         }
         .panel h3 { font-size: 12px; font-weight: 700; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border); color: #334155; flex-shrink: 0; }
         
@@ -83,62 +61,45 @@
         .form-group { margin-bottom: 6px; }
         label { display: block; margin-bottom: 2px; font-weight: 600; font-size: 11px; color: #475569; }
         input, select { 
-            width: 100%; padding: 5px 8px; border: 1px solid var(--border); 
-            border-radius: 4px; font-size: 12px; color: var(--text-main); background-color: #fff;
+            width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; color: var(--text-main); background-color: #fff;
         }
         input:focus, select:focus { outline: none; border-color: var(--primary); }
         
         button { 
-            display: inline-flex; align-items: center; justify-content: center; gap: 4px;
-            padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; 
-            font-weight: 600; font-size: 12px;
+            display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;
         }
         button.btn-block { width: 100%; padding: 8px; }
         button.btn-primary { background: var(--primary); color: white; }
         button.btn-secondary { background: #e2e8f0; color: #334155; }
         button.btn-secondary:hover { background: #cbd5e1; }
         
-        .scroll-list { 
-            overflow-y: auto; 
-            flex-grow: 1;
-            padding-right: 2px;
-            min-height: 0;
-        }
+        .scroll-list { overflow-y: auto; flex-grow: 1; padding-right: 2px; min-height: 0; }
         .scroll-list::-webkit-scrollbar { width: 4px; }
         .scroll-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
         
         .compact-row { 
-            display: flex; justify-content: space-between; align-items: center; 
-            padding: 5px 8px; background: #f8fafc; border: 1px solid #e2e8f0;
-            border-radius: 4px; margin-bottom: 4px; font-size: 12px;
+            display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 4px; font-size: 12px;
         }
         .compact-row:hover { background: #f1f5f9; }
         
-        .month-card {
-            background: #f8fafc; border: 1px solid var(--border);
-            border-radius: 6px; padding: 8px; margin-bottom: 6px;
-        }
+        .month-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px; }
         .month-header { font-weight: 700; color: #1e293b; border-bottom: 1px dashed var(--border); padding-bottom: 3px; margin-bottom: 5px; text-transform: capitalize; }
         .month-data { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; }
         
         .badge { display: inline-block; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
         .badge.gasto { background: var(--gasto-bg); color: var(--gasto); }
         .badge.ingreso { background: var(--ingreso-bg); color: var(--ingreso); }
-        .badge.wallet { background: #f1f5f9; color: #475569; border: 1px solid var(--border); margin-left: 2px; }
+        .badge.wallet { background: #e2e8f0; color: #334155; border: 1px solid var(--border); margin-left: 2px; max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
         
         .actions-wrapper { display: flex; gap: 2px; }
         .btn-trigger { background: transparent; color: var(--text-muted); padding: 4px; border: none; cursor: pointer; border-radius: 3px; font-size: 11px; }
         .btn-trigger:hover { background: #e2e8f0; color: var(--text-main); }
         .btn-trigger.danger:hover { background: var(--gasto-bg); color: var(--gasto); }
         
-        .filter-strip { display: flex; background: #e2e8f0; padding: 2px; border-radius: 4px; gap: 2px; }
-        .filter-tab { background: transparent; color: var(--text-muted); padding: 4px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; }
-        .filter-tab.active { background: white; color: var(--text-main); }
+        .filter-select { width: auto; min-width: 120px; padding: 3px 6px; font-size: 11px; height: 24px; }
         
         footer { 
-            background: var(--bg-card); border: 1px solid var(--border); padding: 6px 14px; 
-            border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center; font-size: 11px;
-            flex-shrink: 0;
+            background: var(--bg-card); border: 1px solid var(--border); padding: 6px 14px; border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center; font-size: 11px; flex-shrink: 0;
         }
     </style>
 </head>
@@ -146,17 +107,16 @@
 
 <div class="container">
     <header>
-        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v5.0 Multi-Wallet</small></h1>
+        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v5.2 Custom-Wallets</small></h1>
         
-        <!-- Línea de micro-balances individuales y globales -->
         <div class="balance-strip">
-            <div class="balance-item">Neto: <b id="view-balance">$0,00</b></div>
+            <div class="balance-item">Neto Total: <b id="view-balance">$0,00</b></div>
             <div style="width:1px; height:12px; background:var(--border);"></div>
             <div class="balance-item">💵 Efec: <b id="view-bal-efectivo">$0,00</b></div>
             <div style="width:1px; height:12px; background:var(--border);"></div>
-            <div class="balance-item">💳 Déb1: <b id="view-bal-debito1">$0,00</b></div>
+            <div class="balance-item">💳 <span id="label-hdr-debito1">Banco 1</span>: <b id="view-bal-debito1">$0,00</b></div>
             <div style="width:1px; height:12px; background:var(--border);"></div>
-            <div class="balance-item">💳 Déb2: <b id="view-bal-debito2">$0,00</b></div>
+            <div class="balance-item">💳 <span id="label-hdr-debito2">Banco 2</span>: <b id="view-bal-debito2">$0,00</b></div>
             <div style="width:1px; height:12px; background:var(--border);"></div>
             <div class="balance-item" style="color:var(--ingreso);">I: <b id="view-ingresos" style="color:var(--ingreso); font-size:11px;">$0,00</b></div>
             <div class="balance-item" style="color:var(--gasto);">G: <b id="view-gastos" style="color:var(--gasto); font-size:11px;">$0,00</b></div>
@@ -164,7 +124,6 @@
     </header>
     
     <div class="workspace-grid">
-        <!-- Columna 1: Rubros -->
         <div class="panel">
             <h3>📁 Rubros</h3>
             <div class="form-container">
@@ -181,15 +140,27 @@
                 </div>
                 <input type="hidden" id="rubro-edit-id" value="">
                 
-                <div style="display: flex; gap: 4px; margin-bottom: 10px;">
+                <div style="display: flex; gap: 4px; margin-bottom: 8px;">
                     <button id="btn-guardar-rubro" class="btn-primary" style="flex:1;">Añadir</button>
                     <button id="btn-cancelar-rubro" class="btn-secondary" style="display:none;">X</button>
                 </div>
             </div>
-            <div class="scroll-list" id="lista-rubros"></div>
+            <div class="scroll-list" id="lista-rubros" style="max-height: 160px; margin-bottom: 8px;"></div>
+
+            <h3 style="margin-top:auto; padding-top:4px;">🏦 Configurar Bancos</h3>
+            <div class="form-container">
+                <div class="form-group">
+                    <label for="cfg-debito1">Nombre Banco 1</label>
+                    <input type="text" id="cfg-debito1" placeholder="Ej: Galicia">
+                </div>
+                <div class="form-group">
+                    <label for="cfg-debito2">Nombre Banco 2</label>
+                    <input type="text" id="cfg-debito2" placeholder="Ej: Mercado Pago">
+                </div>
+                <button id="btn-guardar-bancos" class="btn-secondary btn-block" style="font-size:11px; padding:5px;">Guardar Nombres</button>
+            </div>
         </div>
 
-        <!-- Columna 2: Carga con Selector de Fondos -->
         <div class="panel">
             <h3>✍️ Carga de Transacciones</h3>
             <div class="form-container">
@@ -206,31 +177,21 @@
                     <select id="mov-rubro"></select>
                 </div>
                 <div class="form-group">
-                    <label for="mov-origen">Método / Origen de Fondos</label>
-                    <select id="mov-origen">
-                        <option value="efectivo">💵 Efectivo</option>
-                        <option value="debito1">💳 Débito Banco 1</option>
-                        <option value="debito2">💳 Débito Banco 2</option>
-                    </select>
+                    <label for="mov-origen">Método de Pago / Destino Fondo</label>
+                    <select id="mov-origen"></select>
                 </div>
                 <button id="btn-guardar-movimiento" class="btn-primary btn-block" style="background:#0f172a; margin-top:6px;">Asentar Registro</button>
             </div>
         </div>
 
-        <!-- Columna 3: Libro Diario -->
         <div class="panel">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); flex-shrink: 0;">
                 <h3 style="margin-bottom:0; border-bottom:none;">📊 Libro de Movimientos</h3>
-                <div class="filter-strip">
-                    <button class="filter-tab active" id="filter-all">Todos</button>
-                    <button class="filter-tab" id="filter-gasto">Gastos</button>
-                    <button class="filter-tab" id="filter-ingreso">Ingresos</button>
-                </div>
+                <select id="filtro-avanzado" class="filter-select"></select>
             </div>
             <div class="scroll-list" id="lista-movimientos"></div>
         </div>
 
-        <!-- Columna 4: Reporte Mensual -->
         <div class="panel">
             <h3>📈 Reporte por Mes</h3>
             <div class="scroll-list" id="lista-reporte-mensual"></div>
@@ -257,6 +218,7 @@
         document.getElementById('db-status').textContent = "Modo Volátil (Brave Shields)";
     }
 
+    // Instancia de base con soporte para etiquetas de banco editables
     let DB = {
         nid: 1,
         rubros: [
@@ -264,15 +226,21 @@
             { id: 2, nombre: 'Supermercado', tipo: 'gasto' },
             { id: 3, nombre: 'Servicios', tipo: 'gasto' }
         ],
-        movimientos: []
+        movimientos: [],
+        bancos: {
+            debito1: 'Banco 1',
+            debito2: 'Banco 2'
+        }
     };
 
-    const SKEY = 'finanzas-pro-compact-v5';
-    let filtroActual = 'all';
+    const SKEY = 'finanzas-pro-compact-v6';
 
     window.onload = function() {
         if (storageDisponible && localStorage.getItem(SKEY)) {
-            try { DB = JSON.parse(localStorage.getItem(SKEY)); } catch(e) {}
+            try { 
+                DB = JSON.parse(localStorage.getItem(SKEY)); 
+                if(!DB.bancos) DB.bancos = { debito1: 'Banco 1', debito2: 'Banco 2' };
+            } catch(e) {}
         } else {
             DB.nid = 4;
             save();
@@ -281,16 +249,29 @@
         document.getElementById('btn-guardar-rubro').addEventListener('click', guardarRubro);
         document.getElementById('btn-cancelar-rubro').addEventListener('click', cancelarEdicionRubro);
         document.getElementById('btn-guardar-movimiento').addEventListener('click', guardarMovimiento);
-        
-        document.getElementById('filter-all').addEventListener('click', () => setFiltro('all'));
-        document.getElementById('filter-gasto').addEventListener('click', () => setFiltro('gasto'));
-        document.getElementById('filter-ingreso').addEventListener('click', () => setFiltro('ingreso'));
+        document.getElementById('btn-guardar-bancos').addEventListener('click', guardarNombresBancos);
+        document.getElementById('filtro-avanzado').addEventListener('change', render);
+
+        // Precargar configuración de inputs de bancos
+        document.getElementById('cfg-debito1').value = DB.bancos.debito1;
+        document.getElementById('cfg-debito2').value = DB.bancos.debito2;
 
         render();
     };
 
     function save() {
         if (storageDisponible) localStorage.setItem(SKEY, JSON.stringify(DB));
+    }
+
+    function guardarNombresBancos() {
+        const d1 = document.getElementById('cfg-debito1').value.trim();
+        const d2 = document.getElementById('cfg-debito2').value.trim();
+        
+        DB.bancos.debito1 = d1 || 'Banco 1';
+        DB.bancos.debito2 = d2 || 'Banco 2';
+        
+        save();
+        render();
     }
 
     function guardarRubro() {
@@ -346,7 +327,7 @@
             concepto: conceptoInput.value.trim() || 'General',
             monto: monto,
             rubroId: rubroId,
-            origen: origen, // Guardado de la billetera origen
+            origen: origen,
             fecha: new Date().toLocaleDateString()
         });
 
@@ -364,11 +345,8 @@
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB, null, 2));
         const downloadAnchor = document.createElement('a');
         const ahora = new Date();
-        const fechaStr = ahora.toISOString().slice(0,10);
-        const horaStr = ahora.toTimeString().slice(0,8).replace(/:/g, '-');
-        
         downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `backup_contable_${fechaStr}_${horaStr}.json`);
+        downloadAnchor.setAttribute("download", `backup_contable_${ahora.toISOString().slice(0,10)}_${ahora.toTimeString().slice(0,8).replace(/:/g, '-')}.json`);
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click(); downloadAnchor.remove();
     }
@@ -381,34 +359,18 @@
                 if (parsed.rubros && parsed.movimientos) {
                     if (confirm('Se detectó una copia válida. ¿Desea restaurarla?')) {
                         DB = parsed;
-                        
-                        // Blindaje de compatibilidad: si el registro no tiene origen, va a Efectivo
-                        DB.movimientos.forEach(m => {
-                            if (!m.origen) m.origen = 'efectivo';
-                        });
-
-                        if (!DB.nid) {
-                            const maxRubro = DB.rubros.reduce((max, r) => r.id > max ? r.id : max, 0);
-                            const maxMov = DB.movimientos.reduce((max, m) => m.id > max ? m.id : max, 0);
-                            DB.nid = Math.max(maxRubro, maxMov) + 1;
-                        }
+                        if (!DB.bancos) DB.bancos = { debito1: 'Banco 1', debito2: 'Banco 2' };
+                        DB.movimientos.forEach(m => { if (!m.origen) m.origen = 'efectivo'; });
+                        document.getElementById('cfg-debito1').value = DB.bancos.debito1;
+                        document.getElementById('cfg-debito2').value = DB.bancos.debito2;
                         save(); render();
                         alert('Base de datos restaurada correctamente.');
                     }
-                } else {
-                    alert('Estructura contable no compatible.');
-                }
+                } else { alert('Estructura contable no compatible.'); }
             } catch(e) { alert('Fallo al interpretar el JSON.'); }
         };
         if(event.target.files[0]) reader.readAsText(event.target.files[0]);
         event.target.value = '';
-    }
-
-    function setFiltro(tipo) {
-        filtroActual = tipo;
-        document.querySelectorAll('.filter-tab').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(`filter-${tipo}`).classList.add('active');
-        render();
     }
 
     function formatMoneda(valor) {
@@ -419,7 +381,6 @@
         if (!fechaStr || typeof fechaStr !== 'string') return { orden: '0000-00', etiqueta: 'General' };
         let d = NaN, m = NaN, a = NaN;
         let partes = fechaStr.includes('/') ? fechaStr.split('/') : fechaStr.split('-');
-        
         if (partes.length >= 3) {
             if (partes[0].length === 4) {
                 a = parseInt(partes[0]); m = parseInt(partes[1]) - 1; d = parseInt(partes[2]);
@@ -431,9 +392,7 @@
             const dateObj = new Date(fechaStr);
             if (!isNaN(dateObj.getTime())) {
                 d = dateObj.getDate(); m = dateObj.getMonth(); a = dateObj.getFullYear();
-            } else {
-                return { orden: '9999-12', etiqueta: 'Fecha General' };
-            }
+            } else { return { orden: '9999-12', etiqueta: 'Fecha General' }; }
         }
         const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
         return { orden: `${a}-${String(m + 1).padStart(2, '0')}`, etiqueta: `${nombresMeses[m]} ${a}` };
@@ -441,6 +400,10 @@
 
     function render() {
         DB.rubros.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+        // Sincronizar etiquetas de texto en cabecera superior
+        document.getElementById('label-hdr-debito1').textContent = DB.bancos.debito1;
+        document.getElementById('label-hdr-debito2').textContent = DB.bancos.debito2;
 
         // 1. Render Rubros
         const listaRubros = document.getElementById('lista-rubros');
@@ -460,7 +423,7 @@
             listaRubros.appendChild(div);
         });
 
-        // 2. Render Selector
+        // 2. Render Selector de Rubros
         const rubroSelect = document.getElementById('mov-rubro');
         rubroSelect.innerHTML = '';
         DB.rubros.forEach(r => {
@@ -470,23 +433,44 @@
             rubroSelect.appendChild(opt);
         });
 
-        // 3. Render Historial, Cálculos Globales y de Cuentas
+        // Sincronizar dinámicamente el selector del formulario de carga
+        const origenSelect = document.getElementById('mov-origen');
+        origenSelect.innerHTML = `
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="debito1">💳 ${DB.bancos.debito1}</option>
+            <option value="debito2">💳 ${DB.bancos.debito2}</option>
+        `;
+
+        // Sincronizar dinámicamente las opciones del selector de filtros
+        const filtroSelect = document.getElementById('filtro-avanzado');
+        const fFiltroAnterior = filtroSelect.value || 'all';
+        filtroSelect.innerHTML = `
+            <option value="all">🔍 Mostrar Todo</option>
+            <option value="gasto">🔻 Solo Gastos</option>
+            <option value="ingreso">🔺 Solo Ingresos</option>
+            <option value="f-efectivo">💵 Solo Efectivo</option>
+            <option value="f-debito1">💳 Solo ${DB.bancos.debito1}</option>
+            <option value="f-debito2">💳 Solo ${DB.bancos.debito2}</option>
+        `;
+        filtroSelect.value = fFiltroAnterior;
+
+        // 3. Procesamiento del Libro Diario
         const listaMovimientos = document.getElementById('lista-movimientos');
         listaMovimientos.innerHTML = '';
         
         let tIngresos = 0, tGastos = 0;
         let balEfectivo = 0, balDebito1 = 0, balDebito2 = 0;
         let mapaMensual = {};
+        
+        const fValor = filtroSelect.value || 'all';
 
         DB.movimientos.forEach(m => {
             const rubro = DB.rubros.find(r => r.id === m.rubroId);
             const tipo = rubro ? rubro.tipo : 'gasto';
             const mOrigen = m.origen || 'efectivo';
             
-            // Computación global
             if (tipo === 'ingreso') tIngresos += m.monto; else tGastos += m.monto;
             
-            // Computación por cuenta/origen individual
             if (mOrigen === 'efectivo') {
                 if (tipo === 'ingreso') balEfectivo += m.monto; else balEfectivo -= m.monto;
             } else if (mOrigen === 'debito1') {
@@ -495,7 +479,6 @@
                 if (tipo === 'ingreso') balDebito2 += m.monto; else balDebito2 -= m.monto;
             }
             
-            // Agrupación mensual para reportes
             const infoMes = obtenerMesClave(m.fecha);
             if (!mapaMensual[infoMes.orden]) {
                 mapaMensual[infoMes.orden] = { etiqueta: infoMes.etiqueta, ingresos: 0, gastos: 0 };
@@ -505,12 +488,17 @@
         });
 
         const filtrados = DB.movimientos.filter(m => {
-            if (filtroActual === 'all') return true;
             const rubro = DB.rubros.find(r => r.id === m.rubroId);
-            return (rubro ? rubro.tipo : 'gasto') === filtroActual;
-        });
+            const tipo = rubro ? rubro.tipo : 'gasto';
+            const origen = m.origen || 'efectivo';
 
-        const diccionarioOrigen = { 'efectivo': 'EFEC', 'debito1': 'DEB1', 'debito2': 'DEB2' };
+            if (fValor === 'all') return true;
+            if (fValor === 'gasto' || fValor === 'ingreso') return tipo === fValor;
+            if (fValor === 'f-efectivo') return origen === 'efectivo';
+            if (fValor === 'f-debito1') return origen === 'debito1';
+            if (fValor === 'f-debito2') return origen === 'debito2';
+            return true;
+        });
 
         if (filtrados.length === 0) {
             listaMovimientos.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Sin asientos.</div>`;
@@ -519,7 +507,11 @@
                 const rubro = DB.rubros.find(r => r.id === m.rubroId);
                 const tipo = rubro ? rubro.tipo : 'gasto';
                 const nRubro = rubro ? rubro.nombre : 'S/R';
-                const tagOrigen = diccionarioOrigen[m.origen || 'efectivo'];
+                
+                // Mapear el origen a la etiqueta personalizada corta del banco
+                let tagOrigen = 'EFEC';
+                if (m.origen === 'debito1') tagOrigen = DB.bancos.debito1;
+                if (m.origen === 'debito2') tagOrigen = DB.bancos.debito2;
 
                 const div = document.createElement('div');
                 div.className = 'compact-row';
@@ -528,7 +520,7 @@
                         <strong style="color:#0f172a;">${m.concepto}</strong> 
                         <span style="color:var(--text-muted); font-size:10px; margin-left:4px;">${m.fecha}</span>
                         <span class="badge ${tipo}" style="margin-left:4px;">${nRubro}</span>
-                        <span class="badge wallet">${tagOrigen}</span>
+                        <span class="badge wallet" title="${tagOrigen}">${tagOrigen}</span>
                     </div>
                     <div class="actions-wrapper" style="align-items:center;">
                         <span style="font-weight:700; margin-right:6px; color:var(--${tipo})">
@@ -569,7 +561,7 @@
             });
         }
 
-        // Actualización de micro-balances en barra superior
+        // Renderizado de balances generales
         document.getElementById('view-ingresos').textContent = formatMoneda(tIngresos);
         document.getElementById('view-gastos').textContent = formatMoneda(tGastos);
         
@@ -578,7 +570,6 @@
         bEl.textContent = formatMoneda(balanceTotal);
         bEl.style.color = balanceTotal >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
 
-        // Pintar balances individuales de billeteras
         const elEf = document.getElementById('view-bal-efectivo');
         elEf.textContent = formatMoneda(balEfectivo); elEf.style.color = balEfectivo >= 0 ? '' : 'var(--gasto)';
         
