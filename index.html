@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FinanzasPro - Matrix Budget Edition</title>
     
+    <!-- Vinculación de PWA con rutas adaptadas a GitHub Pages -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=192&h=192&fit=crop&auto=format">
+    <link class="apple-touch-icon" href="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=192&h=192&fit=crop&auto=format">
 
     <style>
         :root {
@@ -148,13 +149,10 @@
         <div class="balance-strip">
             <div class="balance-item">Neto: <b id="view-balance">$0,00</b></div>
             <div style="width:1px; height:12px; background:var(--border);"></div>
-            
             <div class="balance-item">🎯 Presupuestado: <b id="view-budget-general" style="color: var(--primary);">$0,00</b></div>
             <div style="width:1px; height:12px; background:var(--border);"></div>
-            
             <div class="balance-item">⏳ Restan: <b id="view-budget-restante" style="color: var(--ingreso);">$0,00</b></div>
             <div style="width:1px; height:12px; background:var(--border);"></div>
-            
             <div class="balance-item">💵 Efec: <b id="view-bal-efectivo">$0,00</b></div>
             <div style="width:1px; height:12px; background:var(--border);"></div>
             <div class="balance-item">💳 <span id="label-hdr-debito1">Banco 1</span>: <b id="view-bal-debito1">$0,00</b></div>
@@ -537,7 +535,6 @@
         return partes.length === 3 ? (partes[0].length === 4 ? new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2])) : new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]))) : new Date(fechaStr);
     }
 
-    // Retorna la clave del mes en curso real bajo reloj del sistema
     function obtenerClaveMesActualReal() {
         const hoy = new Date();
         return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
@@ -616,6 +613,20 @@
         document.getElementById('mov-origen').innerHTML = opcionesCuentasHtml;
         document.getElementById('mov-transf-origen').innerHTML = opcionesCuentasHtml;
         document.getElementById('mov-transf-destino').innerHTML = opcionesCuentasHtml;
+
+        // --- REPARACIÓN MAESTRA DE LAS OPCIONES DEL FILTRO AVANZADO ---
+        const filtroSelect = document.getElementById('filtro-avanzado');
+        const fFiltroAnterior = filtroSelect.value || 'all';
+        filtroSelect.innerHTML = `
+            <option value="all">🔍 Todo</option>
+            <option value="gasto">🔻 Gastos</option>
+            <option value="ingreso">🔺 Ingresos</option>
+            <option value="transferencia">⇅ Transferencias</option>
+            <option value="f-efectivo">💵 Efec</option>
+            <option value="f-debito1">💳 ${DB.bancos.debito1}</option>
+            <option value="f-debito2">💳 ${DB.bancos.debito2}</option>
+        `;
+        filtroSelect.value = fFiltroAnterior;
 
         let tIngresos = 0, tGastos = 0, balEfectivo = 0, balDebito1 = 0, balDebito2 = 0;
         let mapaMensual = {};
@@ -719,23 +730,19 @@
             listaReporte.appendChild(div);
         });
 
-        // Asegurar cálculo preventivo del mes actual bajo reloj si no hay transacciones asentadas aún
         if(sumaPresupuestosMesActualBarra === 0) {
             DB.rubros.forEach(rub => { if(rub.tipo === 'gasto') sumaPresupuestosMesActualBarra += obtenerLimiteHistoricoRubro(claveMesActualSist, rub.id); });
         }
         
-        // --- ACTUALIZACIÓN DE INDICADORES DE LA BARRA SUPERIOR ---
         const elBgral = document.getElementById('view-budget-general');
         elBgral.textContent = `${formatMoneda(totalGastadoMesActualBarra)} / ${formatMoneda(sumaPresupuestosMesActualBarra)}`;
         elBgral.style.color = totalGastadoMesActualBarra > sumaPresupuestosMesActualBarra ? 'var(--gasto)' : 'var(--primary)';
 
-        // CALCULO DE LA DISPONIBILIDAD RESTANTE DEL MES EN CURSO
         const presupuestoRestanteMesActual = sumaPresupuestosMesActualBarra - totalGastadoMesActualBarra;
         const elRestante = document.getElementById('view-budget-restante');
         elRestante.textContent = formatMoneda(presupuestoRestanteMesActual);
         elRestante.style.color = presupuestoRestanteMesActual >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
 
-        // Saldos globales de carteras
         const balanceTotal = tIngresos - tGastos;
         const bEl = document.getElementById('view-balance'); bEl.textContent = formatMoneda(balanceTotal); bEl.style.color = balanceTotal >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
         const elEf = document.getElementById('view-bal-efectivo'); elEf.textContent = formatMoneda(balEfectivo); elEf.style.color = balEfectivo >= 0 ? '' : 'var(--gasto)';
