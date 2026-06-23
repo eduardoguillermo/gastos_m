@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinanzasPro - Custom Wallets</title>
+    <title>FinanzasPro - Advanced Ledger</title>
     
-    <!-- Vinculación de PWA con rutas adaptadas a GitHub Pages -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -81,6 +80,13 @@
         button.btn-secondary { background: #e2e8f0; color: #334155; }
         button.btn-secondary:hover { background: #cbd5e1; }
         
+        /* Contenedor de filtros de fecha en libro diario */
+        .date-filter-strip {
+            display: flex; gap: 4px; background: #f8fafc; padding: 6px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 8px; flex-shrink: 0;
+        }
+        .date-filter-group { flex: 1; }
+        .date-filter-group input { padding: 3px 6px; font-size: 11px; }
+
         .scroll-list { overflow-y: auto; flex-grow: 1; padding-right: 2px; min-height: 0; }
         .scroll-list::-webkit-scrollbar { width: 4px; }
         .scroll-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
@@ -104,8 +110,10 @@
         .btn-trigger:hover { background: #e2e8f0; color: var(--text-main); }
         .btn-trigger.danger:hover { background: var(--gasto-bg); color: var(--gasto); }
         
-        .filter-select { width: auto; min-width: 120px; padding: 3px 6px; font-size: 11px; height: 24px; }
-        
+        .filter-select { width: auto; min-width: 110px; padding: 3px 6px; font-size: 11px; height: 24px; }
+        .btn-print { background: #0f172a; color: white; padding: 4px 8px; font-size: 11px; height: 24px; }
+        .btn-print:hover { background: #334155; }
+
         footer { 
             background: var(--bg-card); border: 1px solid var(--border); padding: 6px 14px; border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center; font-size: 11px; flex-shrink: 0;
         }
@@ -115,7 +123,7 @@
 
 <div class="container">
     <header>
-        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v5.2 Custom-Wallets</small></h1>
+        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v5.5 Advanced-Ledger</small></h1>
         
         <div class="balance-strip">
             <div class="balance-item">Neto Total: <b id="view-balance">$0,00</b></div>
@@ -193,10 +201,28 @@
         </div>
 
         <div class="panel">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); flex-shrink: 0;">
-                <h3 style="margin-bottom:0; border-bottom:none;">📊 Libro de Movimientos</h3>
-                <select id="filtro-avanzado" class="filter-select"></select>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 4px;">
+                <h3 style="margin-bottom:0; border-bottom:none;">📊 Libro Diario</h3>
+                <div style="display: flex; gap: 4px;">
+                    <select id="filtro-avanzado" class="filter-select"></select>
+                    <button class="btn-print" onclick="imprimirMovimientosFiltrados()">🖨️ Imprimir</button>
+                </div>
             </div>
+            
+            <div class="date-filter-strip">
+                <div class="date-filter-group">
+                    <label style="font-size: 9px; font-weight: 700;">DESDE</label>
+                    <input type="date" id="filtro-fecha-desde">
+                </div>
+                <div class="date-filter-group">
+                    <label style="font-size: 9px; font-weight: 700;">HASTA</label>
+                    <input type="date" id="filtro-fecha-hasta">
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                    <button class="btn-secondary" onclick="limpiarFiltrosFecha()" style="padding: 4px 6px; height: 21px; font-size: 10px;" title="Limpiar Fechas">X</button>
+                </div>
+            </div>
+
             <div class="scroll-list" id="lista-movimientos"></div>
         </div>
 
@@ -255,6 +281,10 @@
         document.getElementById('btn-guardar-movimiento').addEventListener('click', guardarMovimiento);
         document.getElementById('btn-guardar-bancos').addEventListener('click', guardarNombresBancos);
         document.getElementById('filtro-avanzado').addEventListener('change', render);
+        
+        // Escuchas automáticas para el filtro de fecha
+        document.getElementById('filtro-fecha-desde').addEventListener('change', render);
+        document.getElementById('filtro-fecha-hasta').addEventListener('change', render);
 
         document.getElementById('cfg-debito1').value = DB.bancos.debito1;
         document.getElementById('cfg-debito2').value = DB.bancos.debito2;
@@ -267,17 +297,17 @@
     }
 
     // --- SISTEMA DE REGISTRO DIRECCIONAL DE PWA CON TRAZA ---
-    console.log("PWA: Iniciando secuencia de verificación...");
     if ('serviceWorker' in navigator) {
         const repoPath = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
-        const finalSwUrl = repoPath + 'sw.js';
-        
-        console.log("PWA: Intentando registrar script en la ruta:", finalSwUrl);
-        navigator.serviceWorker.register(finalSwUrl, { scope: repoPath })
-            .then(reg => console.log('✅ PWA: Service Worker registrado con alcance:', reg.scope))
-            .catch(err => console.error('❌ PWA: Falló el registro del script:', err));
-    } else {
-        console.warn("⚠️ PWA: Este navegador no soporta Service Workers.");
+        navigator.serviceWorker.register(repoPath + 'sw.js', { scope: repoPath })
+            .then(reg => console.log('✅ PWA activa'))
+            .catch(err => console.error('❌ Error PWA:', err));
+    }
+
+    function limpiarFiltrosFecha() {
+        document.getElementById('filtro-fecha-desde').value = '';
+        document.getElementById('filtro-fecha-hasta').value = '';
+        render();
     }
 
     function guardarNombresBancos() {
@@ -332,8 +362,14 @@
         const monto = parseFloat(montoInput.value);
         const rubroId = parseInt(rubroSelect.value);
         if (isNaN(monto) || monto <= 0 || isNaN(rubroId)) return alert('Verifique los datos de carga.');
+        
         DB.movimientos.push({
-            id: DB.nid++, concepto: conceptoInput.value.trim() || 'General', monto: monto, rubroId: rubroId, origen: origenSelect.value, fecha: new Date().toLocaleDateString()
+            id: DB.nid++, 
+            concepto: conceptoInput.value.trim() || 'General', 
+            monto: monto, 
+            rubroId: rubroId, 
+            origen: origenSelect.value, 
+            fecha: new Date().toLocaleDateString() // Formato local "DD/MM/AAAA"
         });
         conceptoInput.value = ''; montoInput.value = '';
         save(); render();
@@ -379,24 +415,157 @@
 
     function formatMoneda(valor) { return '$' + valor.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
 
-    function obtenerMesClave(fechaStr) {
-        if (!fechaStr || typeof fechaStr !== 'string') return { orden: '0000-00', etiqueta: 'General' };
-        let d = NaN, m = NaN, a = NaN;
+    // Función auxiliar unificada para parsear strings latinas o ISO a objetos Date comparables
+    function parseStringToDate(fechaStr) {
+        if(!fechaStr) return null;
         let partes = fechaStr.includes('/') ? fechaStr.split('/') : fechaStr.split('-');
-        if (partes.length >= 3) {
-            if (partes[0].length === 4) {
-                a = parseInt(partes[0]); m = parseInt(partes[1]) - 1; d = parseInt(partes[2]);
-            } else {
-                d = parseInt(partes[0]); m = parseInt(partes[1]) - 1; a = parseInt(partes[2]);
+        if (partes.length === 3) {
+            if (partes[0].length === 4) { // ISO AAAA-MM-DD
+                return new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+            } else { // DD/MM/AAAA
+                return new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]));
             }
         }
-        if (isNaN(d) || isNaN(m) || isNaN(a)) {
-            const dateObj = new Date(fechaStr);
-            if (!isNaN(dateObj.getTime())) { d = dateObj.getDate(); m = dateObj.getMonth(); a = dateObj.getFullYear(); } 
-            else { return { orden: '9999-12', etiqueta: 'Fecha General' }; }
-        }
+        return new Date(fechaStr);
+    }
+
+    function obtenerMesClave(fechaStr) {
+        const dateObj = parseStringToDate(fechaStr);
+        if(!dateObj || isNaN(dateObj.getTime())) return { orden: '9999-12', etiqueta: 'Fecha General' };
+        
+        const m = dateObj.getMonth();
+        const a = dateObj.getFullYear();
         const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
         return { orden: `${a}-${String(m + 1).padStart(2, '0')}`, etiqueta: `${nombresMeses[m]} ${a}` };
+    }
+
+    // RETORNA EL ARRAY DE MOVIMIENTOS ATRAVESADO POR TODOS LOS FILTROS SELECCIONADOS
+    function obtenerMovimientosFiltrados() {
+        const fValor = document.getElementById('filtro-avanzado').value || 'all';
+        const fDesdeStr = document.getElementById('filtro-fecha-desde').value;
+        const fHastaStr = document.getElementById('filtro-fecha-hasta').value;
+
+        const dateDesde = fDesdeStr ? new Date(fDesdeStr + 'T00:00:00') : null;
+        const dateHasta = fHastaStr ? new Date(fHastaStr + 'T23:59:59') : null;
+
+        return DB.movimientos.filter(m => {
+            const rubro = DB.rubros.find(r => r.id === m.rubroId);
+            const tipo = rubro ? rubro.tipo : 'gasto';
+            const origen = m.origen || 'efectivo';
+
+            // 1. Filtrado por Tipo o Cuenta
+            if (fValor !== 'all') {
+                if ((fValor === 'gasto' || fValor === 'ingreso') && tipo !== fValor) return false;
+                if (fValor === 'f-efectivo' && origen !== 'efectivo') return false;
+                if (fValor === 'f-debito1' && origen !== 'debito1') return false;
+                if (fValor === 'f-debito2' && origen !== 'debito2') return false;
+            }
+
+            // 2. Filtrado por Rango de Fechas
+            const fechaMov = parseStringToDate(m.fecha);
+            if (fechaMov) {
+                if (dateDesde && fechaMov < dateDesde) return false;
+                if (dateHasta && fechaMov > dateHasta) return false;
+            }
+
+            return true;
+        });
+    }
+
+    // SISTEMA AVANZADO DE IMPRESIÓN SINCRO-FILTRADO
+    function imprimirMovimientosFiltrados() {
+        const movimientosAImprimir = obtenerMovimientosFiltrados();
+        if(movimientosAImprimir.length === 0) return alert('No hay movimientos que coincidan con los filtros aplicados para imprimir.');
+
+        // Crear una ventana oculta temporal optimizada para inyección HTML limpia
+        const ventanaImpresion = window.open('', '_blank');
+        
+        let filasHtml = '';
+        let acumuladoImpresion = 0;
+
+        // Ordenar cronológico inverso para el reporte impreso
+        [...movimientosAImprimir].reverse().forEach((m, index) => {
+            const rubro = DB.rubros.find(r => r.id === m.rubroId);
+            const tipo = rubro ? rubro.tipo : 'gasto';
+            const nRubro = rubro ? rubro.nombre : 'S/R';
+            let tagOrigen = m.origen === 'debito1' ? DB.bancos.debito1 : (m.origen === 'debito2' ? DB.bancos.debito2 : 'Efectivo');
+            
+            if(tipo === 'ingreso') acumuladoImpresion += m.monto; else acumuladoImpresion -= m.monto;
+
+            filasHtml += `
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 7px; font-size: 11px;">${index + 1}</td>
+                    <td style="padding: 7px; font-size: 11px;">${m.fecha}</td>
+                    <td style="padding: 7px; font-size: 11px;"><strong>${m.concepto}</strong></td>
+                    <td style="padding: 7px; font-size: 11px;"><span style="color:#475569; background:#f1f5f9; padding:2px 4px; border-radius:3px; font-size:10px;">${nRubro}</span></td>
+                    <td style="padding: 7px; font-size: 11px; color:#475569;">${tagOrigen}</td>
+                    <td style="padding: 7px; font-size: 11px; text-align: right; font-weight: 700; color: ${tipo === 'gasto' ? '#ef4444' : '#10b981'}">
+                        ${tipo === 'gasto' ? '-' : '+'}${formatMoneda(m.monto)}
+                    </td>
+                </tr>
+            `;
+        });
+
+        const filtroTexto = document.getElementById('filtro-avanzado').options[document.getElementById('filtro-avanzado').selectedIndex].text;
+        const fDesde = document.getElementById('filtro-fecha-desde').value;
+        const fHasta = document.getElementById('filtro-fecha-hasta').value;
+        const rangoTexto = (fDesde || fHasta) ? `Período: ${fDesde || 'Inicio'} hasta ${fHasta || 'Actualidad'}` : 'Historial Completo';
+
+        ventanaImpresion.document.write(`
+            <html>
+            <head>
+                <title>Reporte Contable - FinanzasPro</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; padding: 40px; margin: 0; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th { background: #0f172a; color: white; padding: 8px; font-size: 11px; text-align: left; text-transform: uppercase; }
+                    .header-rep { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
+                    .title-rep h1 { margin: 0; font-size: 20px; color: #0f172a; }
+                    .title-rep p { margin: 4px 0 0 0; font-size: 12px; color: #64748b; }
+                    .meta-rep { text-align: right; font-size: 11px; color: #475569; line-height: 1.5; }
+                    .summary-box { display: flex; justify-content: flex-end; margin-top: 20px; }
+                    .summary-card { background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 4px; text-align: right; }
+                </style>
+            </head>
+            <body>
+                <div class="header-rep">
+                    <div class="title-rep">
+                        <h1>Reporte de Movimientos Contables</h1>
+                        <p>${rangoTexto}</p>
+                    </div>
+                    <div class="meta-rep">
+                        <strong>Filtro aplicado:</strong> ${filtroTexto}<br>
+                        <strong>Fecha Emisión:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">N°</th>
+                            <th style="width: 80px;">Fecha</th>
+                            <th>Concepto / Detalle</th>
+                            <th>Rubro</th>
+                            <th>Medio Financiero</th>
+                            <th style="text-align: right; width: 110px;">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filasHtml}
+                    </tbody>
+                </table>
+                <div class="summary-box">
+                    <div class="summary-card">
+                        <span style="font-size: 11px; color: #64748b; font-weight: 600;">BALANCE NETO FILTRADO</span>
+                        <div style="font-size: 18px; font-weight: 800; color: ${acumuladoImpresion >= 0 ? '#10b981' : '#ef4444'}">${formatMoneda(acumuladoImpresion)}</div>
+                    </div>
+                </div>
+                <script>
+                    window.onload = function() { window.print(); setTimeout(function(){ window.close(); }, 500); }
+                <\/script>
+            </body>
+            </html>
+        `);
+        ventanaImpresion.document.close();
     }
 
     function render() {
@@ -424,33 +593,38 @@
 
         const filtroSelect = document.getElementById('filtro-avanzado');
         const fFiltroAnterior = filtroSelect.value || 'all';
-        filtroSelect.innerHTML = `<option value="all">🔍 Mostrar Todo</option><option value="gasto">🔻 Solo Gastos</option><option value="ingreso">🔺 Solo Ingresos</option><option value="f-efectivo">💵 Solo Efectivo</option><option value="f-debito1">💳 Solo ${DB.bancos.debito1}</option><option value="f-debito2">💳 Solo ${DB.bancos.debito2}</option>`;
+        filtroSelect.innerHTML = `
+            <option value="all">🔍 Todo</option>
+            <option value="gasto">🔻 Gastos</option>
+            <option value="ingreso">🔺 Ingresos</option>
+            <option value="f-efectivo">💵 Efectivo</option>
+            <option value="f-debito1">💳 ${DB.bancos.debito1}</option>
+            <option value="f-debito2">💳 ${DB.bancos.debito2}</option>
+        `;
         filtroSelect.value = fFiltroAnterior;
 
         const listaMovimientos = document.getElementById('lista-movimientos'); listaMovimientos.innerHTML = '';
         let tIngresos = 0, tGastos = 0, balEfectivo = 0, balDebito1 = 0, balDebito2 = 0; let mapaMensual = {};
-        const fValor = filtroSelect.value || 'all';
 
+        // Recalcular siempre saldos globales e históricos de forma íntegra
         DB.movimientos.forEach(m => {
             const rubro = DB.rubros.find(r => r.id === m.rubroId); const tipo = rubro ? rubro.tipo : 'gasto'; const mOrigen = m.origen || 'efectivo';
             if (tipo === 'ingreso') tIngresos += m.monto; else tGastos += m.monto;
             if (mOrigen === 'efectivo') { if (tipo === 'ingreso') balEfectivo += m.monto; else balEfectivo -= m.monto; } 
             else if (mOrigen === 'debito1') { if (tipo === 'ingreso') balDebito1 += m.monto; else balDebito1 -= m.monto; } 
             else if (mOrigen === 'debito2') { if (tipo === 'ingreso') balDebito2 += m.monto; else balDebito2 -= m.monto; }
+            
             const infoMes = obtenerMesClave(m.fecha);
             if (!mapaMensual[infoMes.orden]) { mapaMensual[infoMes.orden] = { etiqueta: infoMes.etiqueta, ingresos: 0, gastos: 0 }; }
             if (tipo === 'ingreso') mapaMensual[infoMes.orden].ingresos += m.monto; else mapaMensual[infoMes.orden].gastos += m.monto;
         });
 
-        const filtrados = DB.movimientos.filter(m => {
-            const rubro = DB.rubros.find(r => r.id === m.rubroId); const tipo = rubro ? rubro.tipo : 'gasto'; const origen = m.origen || 'efectivo';
-            if (fValor === 'all') return true; if (fValor === 'gasto' || fValor === 'ingreso') return tipo === fValor;
-            if (fValor === 'f-efectivo') return origen === 'efectivo'; if (fValor === 'f-debito1') return origen === 'debito1'; if (fValor === 'f-debito2') return origen === 'debito2';
-            return true;
-        });
+        // Obtener la porción filtrada cruzando rango de fecha + categoría para la vista en pantalla
+        const filtrados = obtenerMovimientosFiltrados();
 
-        if (filtrados.length === 0) { listaMovimientos.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted);">Sin asientos.</div>`; } 
-        else {
+        if (filtrados.length === 0) { 
+            listaMovimientos.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted); font-size:11px;">Ningún asiento coincide con los filtros aplicados.</div>`; 
+        } else {
             [...filtrados].reverse().forEach(m => {
                 const rubro = DB.rubros.find(r => r.id === m.rubroId); const tipo = rubro ? rubro.tipo : 'gasto'; const nRubro = rubro ? rubro.nombre : 'S/R';
                 let tagOrigen = m.origen === 'debito1' ? DB.bancos.debito1 : (m.origen === 'debito2' ? DB.bancos.debito2 : 'EFEC');
