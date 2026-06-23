@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FinanzasPro - Matrix Budget Edition</title>
     
-    <!-- Vinculación de PWA con rutas adaptadas a GitHub Pages -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -492,11 +491,21 @@
         save(); render();
     }
 
+    // --- REPARACIÓN DE EXPORTACIÓN CON TIMESTAMP FINO COMPLETO ---
     function exportarBackup() {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB, null, 2));
         const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr); downloadAnchor.setAttribute("download", `backup_contable_${new Date().toISOString().slice(0,10)}.json`);
-        document.body.appendChild(downloadAnchor); downloadAnchor.click(); downloadAnchor.remove();
+        const ahora = new Date();
+        
+        // Constructor de marca temporal de precisión (Evita colisiones de archivos el mismo día)
+        const fechaSello = ahora.toISOString().slice(0,10);
+        const horaSello = ahora.toTimeString().slice(0,8).replace(/:/g, '-');
+        
+        downloadAnchor.setAttribute("href", dataStr); 
+        downloadAnchor.setAttribute("download", `backup_contable_${fechaSello}_${horaSello}.json`);
+        document.body.appendChild(downloadAnchor); 
+        downloadAnchor.click(); 
+        downloadAnchor.remove();
     }
 
     function importarBackup(event) {
@@ -614,7 +623,6 @@
         document.getElementById('mov-transf-origen').innerHTML = opcionesCuentasHtml;
         document.getElementById('mov-transf-destino').innerHTML = opcionesCuentasHtml;
 
-        // --- REPARACIÓN MAESTRA DE LAS OPCIONES DEL FILTRO AVANZADO ---
         const filtroSelect = document.getElementById('filtro-avanzado');
         const fFiltroAnterior = filtroSelect.value || 'all';
         filtroSelect.innerHTML = `
