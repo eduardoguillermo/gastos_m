@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinanzasPro - Enterprise Edition</title>
+    <title>FinanzasPro - Historic Budget Edition</title>
     
     <!-- Vinculación de PWA con rutas adaptadas a GitHub Pages -->
     <link rel="manifest" href="manifest.json">
@@ -144,19 +144,18 @@
 
 <div class="container">
     <header>
-        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v6.0 Universal-Core</small></h1>
+        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v6.6 Matrix-Budgets</small></h1>
         
         <div class="balance-strip">
-            <div class="balance-item">Neto Total: <b id="view-balance">$0,00</b></div>
+            <div class="balance-item">Neto: <b id="view-balance">$0,00</b></div>
+            <div style="width:1px; height:12px; background:var(--border);"></div>
+            <div class="balance-item">🎯 Presup. Mes Actual: <b id="view-budget-general" style="color: var(--primary);">$0,00</b></div>
             <div style="width:1px; height:12px; background:var(--border);"></div>
             <div class="balance-item">💵 Efec: <b id="view-bal-efectivo">$0,00</b></div>
             <div style="width:1px; height:12px; background:var(--border);"></div>
             <div class="balance-item">💳 <span id="label-hdr-debito1">Banco 1</span>: <b id="view-bal-debito1">$0,00</b></div>
             <div style="width:1px; height:12px; background:var(--border);"></div>
             <div class="balance-item">💳 <span id="label-hdr-debito2">Banco 2</span>: <b id="view-bal-debito2">$0,00</b></div>
-            <div style="width:1px; height:12px; background:var(--border);"></div>
-            <div class="balance-item" style="color:var(--ingreso);">I: <b id="view-ingresos" style="color:var(--ingreso); font-size:11px;">$0,00</b></div>
-            <div class="balance-item" style="color:var(--gasto);">G: <b id="view-gastos" style="color:var(--gasto); font-size:11px;">$0,00</b></div>
         </div>
     </header>
     
@@ -213,9 +212,17 @@
             </div>
 
             <div id="tab-rubros" class="tab-content">
-                <div class="form-container" style="margin-bottom: 8px; border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
+                <!-- PANEL MAESTRO DE ASIGNACIÓN CRONOLÓGICA DE PRESUPUESTOS -->
+                <div class="form-container" style="margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 6px; background: #f8fafc; padding: 6px; border-radius: var(--radius);">
                     <div class="form-group">
-                        <label for="rubro-nombre">Nombre Rubro</label>
+                        <label for="rubro-mes-visor" style="color:var(--primary); font-weight: 700;">📆 Modificando Límites del Mes:</label>
+                        <select id="rubro-mes-visor" onchange="render()"></select>
+                    </div>
+                </div>
+
+                <div class="form-container" style="margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 6px;">
+                    <div class="form-group">
+                        <label for="rubro-nombre">Nombre Rubro / Categoría</label>
                         <input type="text" id="rubro-nombre" autocomplete="off" placeholder="Ej: Combustible...">
                     </div>
                     <div class="form-group">
@@ -226,13 +233,14 @@
                         </select>
                     </div>
                     <div class="form-group" id="group-rubro-presupuesto">
-                        <label for="rubro-limite">Presupuesto Límite Mensual ($)</label>
-                        <input type="number" id="rubro-limite" step="1" min="0" placeholder="0 (Sin presupuesto)">
+                        <label for="rubro-limite">Límite para el Mes Seleccionado ($)</label>
+                        <input type="number" id="rubro-limite" step="1" min="0" placeholder="0 (Sin límite)">
                     </div>
                     <input type="hidden" id="rubro-edit-id" value="">
-                    <button id="btn-guardar-rubro" class="btn-primary btn-block" style="font-size:11px;">Guardar Categoría</button>
-                    <button id="btn-cancelar-rubro" class="btn-secondary btn-block" style="display:none; font-size:10px; padding:2px;">Cancelar Edición</button>
+                    <button id="btn-guardar-rubro" class="btn-primary btn-block" style="font-size:11px; padding: 5px;">Guardar Categoría</button>
+                    <button id="btn-cancelar-rubro" class="btn-secondary btn-block" style="display:none; font-size:10px; padding:2px;">Cancelar</button>
                 </div>
+
                 <div class="scroll-list" id="lista-rubros"></div>
             </div>
 
@@ -296,17 +304,18 @@
 <div id="contenedor-impresion-pwa"></div>
 
 <script>
-    const SKEY = 'finanzas-pro-compact-v7';
+    const SKEY = 'finanzas-pro-compact-v9'; // Firma del motor de matriz presupuestaria histórica
 
     let DB = {
         nid: 1,
         rubros: [
-            { id: 1, nombre: 'Sueldo', tipo: 'ingreso', limite: 0 },
-            { id: 2, nombre: 'Supermercado', tipo: 'gasto', limite: 0 },
-            { id: 3, nombre: 'Servicios', tipo: 'gasto', limite: 0 }
+            { id: 1, nombre: 'Sueldo', tipo: 'ingreso' },
+            { id: 2, nombre: 'Supermercado', tipo: 'gasto' },
+            { id: 3, nombre: 'Servicios', tipo: 'gasto' }
         ],
         movimientos: [],
-        bancos: { debito1: 'Banco 1', debito2: 'Banco 2' }
+        bancos: { debito1: 'Banco 1', debito2: 'Banco 2' },
+        presupuestosHistoricos: {} // Estructura matriz: { "2026-06": { rubroId: monto_limite } }
     };
 
     window.onload = function() {
@@ -314,12 +323,15 @@
             try { 
                 DB = JSON.parse(localStorage.getItem(SKEY)); 
                 if(!DB.bancos) DB.bancos = { debito1: 'Banco 1', debito2: 'Banco 2' };
-                DB.rubros.forEach(r => { if(r.limite === undefined) r.limite = 0; });
+                if(!DB.presupuestosHistoricos) DB.presupuestosHistoricos = {};
             } catch(e) {}
         } else {
             DB.nid = 4; save();
         }
         
+        // Cargar meses disponibles en el visor
+        inicializarOpcionesDeMesesEnVisor();
+
         document.getElementById('btn-guardar-rubro').addEventListener('click', guardarRubro);
         document.getElementById('btn-cancelar-rubro').addEventListener('click', cancelarEdicionRubro);
         document.getElementById('btn-guardar-movimiento').addEventListener('click', guardarMovimiento);
@@ -350,19 +362,50 @@
 
     function alternarVisibilidadFormularioCarga() {
         const flujo = document.getElementById('mov-tipo-flujo').value;
-        if(flujo === 'transferencia') {
-            document.getElementById('wrapper-carga-estandar').style.display = 'none';
-            document.getElementById('wrapper-carga-transferencia').style.display = 'block';
-        } else {
-            document.getElementById('wrapper-carga-estandar').style.display = 'block';
-            document.getElementById('wrapper-carga-transferencia').style.display = 'none';
-        }
+        document.getElementById('wrapper-carga-estandar').style.display = flujo === 'transferencia' ? 'none' : 'block';
+        document.getElementById('wrapper-carga-transferencia').style.display = flujo === 'transferencia' ? 'block' : 'none';
     }
 
     function limpiarFiltrosFecha() {
         document.getElementById('filtro-fecha-desde').value = '';
         document.getElementById('filtro-fecha-hasta').value = '';
         render();
+    }
+
+    function inicializarOpcionesDeMesesEnVisor() {
+        const select = document.getElementById('rubro-mes-visor');
+        select.innerHTML = '';
+        const hoy = new Date();
+        const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        
+        // Renderizar un rango de los últimos 6 meses y próximos 6 meses para planeamiento futuro
+        for (let i = -6; i <= 6; i++) {
+            const d = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
+            const clave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const opt = document.createElement('option');
+            opt.value = clave;
+            opt.textContent = `${nombresMeses[d.getMonth()]} ${d.getFullYear()}`;
+            if(i === 0) opt.selected = true; // Mes actual por defecto
+            select.appendChild(opt);
+        }
+    }
+
+    // RETORNA EL LÍMITE COMPENSADO O ARRASTRADO DE UN RUBRO PARA UN MES ESPECÍFICO
+    function obtenerLimiteHistoricoRubro(claveMes, rubroId) {
+        if (!DB.presupuestosHistoricos[claveMes]) {
+            // LÓGICA DE ARRASTRE DE PLANTILLA: Si el mes no tiene configuración, busca recursivamente en el mes anterior
+            const partes = claveMes.split('-');
+            const anio = parseInt(partes[0]); const mes = parseInt(partes[1]) - 1;
+            const dMesAnterior = new Date(anio, mes - 1, 1);
+            const claveAnterior = `${dMesAnterior.getFullYear()}-${String(dMesAnterior.getMonth() + 1).padStart(2, '0')}`;
+            
+            // Frenar la recursión si nos vamos muy atrás en el tiempo
+            if (Object.keys(DB.presupuestosHistoricos).length > 0 && anio > 2020) {
+                return obtenerLimiteHistoricoRubro(claveAnterior, rubroId);
+            }
+            return 0; // Si no hay nada en el pasado, el presupuesto inicial es cero
+        }
+        return DB.presupuestosHistoricos[claveMes][rubroId] || 0;
     }
 
     function guardarNombresBancos() {
@@ -376,20 +419,32 @@
         const tipoSelect = document.getElementById('rubro-tipo');
         const limiteInput = document.getElementById('rubro-limite');
         const editIdInput = document.getElementById('rubro-edit-id');
+        const claveMesSeleccionado = document.getElementById('rubro-mes-visor').value;
+        
         const nombre = nombreInput.value.trim();
         if (!nombre) return;
 
         const limiteVal = tipoSelect.value === 'gasto' ? (parseFloat(limiteInput.value) || 0) : 0;
+        let targetRubroId = null;
 
         if (editIdInput.value) {
             const rubro = DB.rubros.find(r => r.id == editIdInput.value);
-            if (rubro) { rubro.nombre = nombre; rubro.tipo = tipoSelect.value; rubro.limite = limiteVal; }
+            if (rubro) { rubro.nombre = nombre; rubro.tipo = tipoSelect.value; }
+            targetRubroId = editIdInput.value;
             document.getElementById('btn-guardar-rubro').textContent = 'Guardar Categoría';
             document.getElementById('btn-cancelar-rubro').style.display = 'none';
             editIdInput.value = '';
         } else {
-            DB.rubros.push({ id: DB.nid++, nombre: nombre, tipo: tipoSelect.value, limite: limiteVal });
+            targetRubroId = DB.nid++;
+            DB.rubros.push({ id: targetRubroId, nombre: nombre, tipo: tipoSelect.value });
         }
+
+        // GUARDADO INDEPENDIENTE EN LA MATRIZ DEL MES SELECCIONADO
+        if (tipoSelect.value === 'gasto') {
+            if (!DB.presupuestosHistoricos[claveMesSeleccionado]) DB.presupuestosHistoricos[claveMesSeleccionado] = {};
+            DB.presupuestosHistoricos[claveMesSeleccionado][targetRubroId] = limiteVal;
+        }
+
         nombreInput.value = ''; limiteInput.value = '';
         save(); render();
     }
@@ -397,9 +452,12 @@
     function editarRubro(id) {
         const rubro = DB.rubros.find(r => r.id == id);
         if (!rubro) return;
+        const claveMesSeleccionado = document.getElementById('rubro-mes-visor').value;
+
         document.getElementById('rubro-nombre').value = rubro.nombre;
         document.getElementById('rubro-tipo').value = rubro.tipo;
-        document.getElementById('rubro-limite').value = rubro.limite || '';
+        // Cargar el límite histórico del mes que se está visualizando en pantalla
+        document.getElementById('rubro-limite').value = obtenerLimiteHistoricoRubro(claveMesSeleccionado, rubro.id) || '';
         document.getElementById('rubro-edit-id').value = rubro.id;
         alternarInputPresupuestoRubro();
         document.getElementById('btn-guardar-rubro').textContent = 'Actualizar';
@@ -409,6 +467,10 @@
     function eliminarRubro(id) {
         if (!confirm('¿Eliminar rubro?')) return;
         DB.rubros = DB.rubros.filter(r => r.id != id);
+        // Limpiar de las matrices históricas
+        Object.keys(DB.presupuestosHistoricos).forEach(clv => {
+            if(DB.presupuestosHistoricos[clv][id]) delete DB.presupuestosHistoricos[clv][id];
+        });
         save(); render();
     }
 
@@ -423,27 +485,18 @@
         if (flujo === 'transferencia') {
             const origen = document.getElementById('mov-transf-origen').value;
             const destino = document.getElementById('mov-transf-destino').value;
-            if(origen === destino) return alert('La cuenta de origen y destino no pueden ser iguales.');
-
+            if(origen === destino) return alert('Cuentas iguales.');
             DB.movimientos.push({
-                id: DB.nid++,
-                concepto: conceptoInput.value.trim() || 'Transferencia de Fondos',
-                monto: monto,
-                rubroId: 0,
-                origen: origen,
-                destino: destino,
-                fecha: new Date().toLocaleDateString()
+                id: DB.nid++, concepto: conceptoInput.value.trim() || 'Transferencia', monto: monto, rubroId: 0, origen: origen, destino: destino, fecha: new Date().toLocaleDateString()
             });
         } else {
             const rubroId = parseInt(document.getElementById('mov-rubro').value);
             const origen = document.getElementById('mov-origen').value;
-            if (isNaN(rubroId)) return alert('Seleccione un rubro válido.');
-
+            if (isNaN(rubroId)) return alert('Seleccione un rubro.');
             DB.movimientos.push({
                 id: DB.nid++, concepto: conceptoInput.value.trim() || 'General', monto: monto, rubroId: rubroId, origen: origen, destino: null, fecha: new Date().toLocaleDateString()
             });
         }
-
         conceptoInput.value = ''; montoInput.value = '';
         save(); render();
     }
@@ -457,60 +510,36 @@
     function exportarBackup() {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB, null, 2));
         const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `backup_contable_${new Date().toISOString().slice(0,10)}.json`);
+        downloadAnchor.setAttribute("href", dataStr); downloadAnchor.setAttribute("download", `backup_contable_${new Date().toISOString().slice(0,10)}.json`);
         document.body.appendChild(downloadAnchor); downloadAnchor.click(); downloadAnchor.remove();
     }
 
-    // --- MOTOR DE IMPORTACIÓN UNIVERSAL COMPATIBLE ---
     function importarBackup(event) {
         const reader = new FileReader();
         reader.onload = function() {
             try {
                 const parsed = JSON.parse(reader.result);
                 if (parsed.rubros && parsed.movimientos) {
-                    if (confirm('Se detectó una copia de respaldo. ¿Desea restaurar todos los datos históricos?')) {
-                        
+                    if (confirm('¿Restaurar copia de respaldo?')) {
                         DB = {
-                            nid: parsed.nid || 1,
-                            rubros: parsed.rubros,
-                            movimientos: parsed.movimientos,
-                            bancos: parsed.bancos || { debito1: 'Banco 1', debito2: 'Banco 2' }
+                            nid: parsed.nid || 1, rubros: parsed.rubros, movimientos: parsed.movimientos,
+                            bancos: parsed.bancos || { debito1: 'Banco 1', debito2: 'Banco 2' },
+                            presupuestosHistoricos: parsed.presupuestosHistoricos || {}
                         };
-
-                        DB.rubros.forEach(r => { 
-                            if(r.limite === undefined) r.limite = 0; 
-                        });
-
-                        DB.movimientos.forEach(m => { 
-                            if (!m.origen) m.origen = 'efectivo'; 
-                            if (m.destino === undefined) m.destino = null;
-                        });
-
-                        if(DB.movimientos.length > 0) {
-                            const maxId = Math.max(...DB.movimientos.map(m => m.id), ...DB.rubros.map(r => r.id));
-                            DB.nid = maxId + 1;
-                        }
-
-                        document.getElementById('cfg-debito1').value = DB.bancos.debito1;
-                        document.getElementById('cfg-debito2').value = DB.bancos.debito2;
-
-                        save(); 
-                        render();
-                        alert('¡Base de datos restaurada con éxito! Todo tu historial volvió a la vida.');
+                        DB.movimientos.forEach(m => { if (!m.origen) m.origen = 'efectivo'; if (m.destino === undefined) m.destino = null; });
+                        if(DB.movimientos.length > 0) DB.nid = Math.max(...DB.movimientos.map(m => m.id), ...DB.rubros.map(r => r.id)) + 1;
+                        document.getElementById('cfg-debito1').value = DB.bancos.debito1; document.getElementById('cfg-debito2').value = DB.bancos.debito2;
+                        save(); render(); alert('Base de datos sincronizada.');
                     }
-                } else { alert('El archivo no tiene el formato contable válido de FinanzasPro.'); }
-            } catch(e) { alert('Error crítico al procesar el archivo JSON: ' + e.message); }
+                }
+            } catch(e) { alert('Error.'); }
         };
         if(event.target.files[0]) reader.readAsText(event.target.files[0]);
-        event.target.value = '';
     }
 
     if ('serviceWorker' in navigator) {
         const repoPath = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
-        navigator.serviceWorker.register(repoPath + 'sw.js', { scope: repoPath })
-            .then(reg => console.log('✅ PWA activa'))
-            .catch(err => console.error('❌ Error PWA:', err));
+        navigator.serviceWorker.register(repoPath + 'sw.js', { scope: repoPath }).catch(() => {});
     }
 
     function formatMoneda(valor) { return '$' + valor.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
@@ -536,17 +565,13 @@
         return DB.movimientos.filter(m => {
             const rubro = DB.rubros.find(r => r.id === m.rubroId);
             const tipo = m.rubroId === 0 ? 'transferencia' : (rubro ? rubro.tipo : 'gasto');
-            const origen = m.origen || 'efectivo';
-            const destino = m.destino;
-
             if (fValor !== 'all') {
                 if ((fValor === 'gasto' || fValor === 'ingreso') && tipo !== fValor) return false;
                 if (fValor === 'transferencia' && tipo !== 'transferencia') return false;
-                if (fValor === 'f-efectivo' && origen !== 'efectivo' && destino !== 'efectivo') return false;
-                if (fValor === 'f-debito1' && origen !== 'debito1' && destino !== 'debito1') return false;
-                if (fValor === 'f-debito2' && origen !== 'debito2' && destino !== 'debito2') return false;
+                if (fValor === 'f-efectivo' && m.origen !== 'efectivo' && m.destino !== 'efectivo') return false;
+                if (fValor === 'f-debito1' && m.origen !== 'debito1' && m.destino !== 'debito1') return false;
+                if (fValor === 'f-debito2' && m.origen !== 'debito2' && m.destino !== 'debito2') return false;
             }
-
             const fechaMov = parseStringToDate(m.fecha);
             if (fechaMov) {
                 if (dateDesde && fechaMov < dateDesde) return false;
@@ -561,46 +586,30 @@
         if(movimientosAImprimir.length === 0) return alert('Sin datos.');
         const contenedor = document.getElementById('contenedor-impresion-pwa');
         let filasHtml = '';
-        
         [...movimientosAImprimir].reverse().forEach((m, index) => {
             const rubro = DB.rubros.find(r => r.id === m.rubroId);
             const tipo = m.rubroId === 0 ? 'transferencia' : (rubro ? rubro.tipo : 'gasto');
             let txtRubro = m.rubroId === 0 ? 'Traspaso' : (rubro ? rubro.nombre : 'S/R');
-            
-            let txtMedio = '';
-            if(m.rubroId === 0) {
-                txtMedio = `${m.origen === 'efectivo' ? 'Efec' : (m.origen === 'debito1' ? DB.bancos.debito1 : DB.bancos.debito2)} ➔ ${m.destino === 'efectivo' ? 'Efec' : (m.destino === 'debito1' ? DB.bancos.debito1 : DB.bancos.debito2)}`;
-            } else {
-                txtMedio = m.origen === 'debito1' ? DB.bancos.debito1 : (m.origen === 'debito2' ? DB.bancos.debito2 : 'Efectivo');
-            }
-
-            filasHtml += `
-                <tr style="border-bottom: 1px solid #cbd5e1;">
-                    <td style="padding: 6px; font-size: 11px;">${index + 1}</td>
-                    <td style="padding: 6px; font-size: 11px;">${m.fecha}</td>
-                    <td style="padding: 6px; font-size: 11px;"><strong>${m.concepto}</strong></td>
-                    <td style="padding: 6px; font-size: 11px;">${txtRubro}</td>
-                    <td style="padding: 6px; font-size: 11px;">${txtMedio}</td>
-                    <td style="padding: 6px; font-size: 11px; text-align: right; font-weight: 700; color: ${tipo === 'gasto' ? '#ef4444' : (tipo === 'ingreso' ? '#10b981' : '#eab308')}">
-                        ${tipo === 'gasto' ? '-' : (tipo === 'ingreso' ? '+' : '⇅')}${formatMoneda(m.monto)}
-                    </td>
-                </tr>
-            `;
+            filasHtml += `<tr style="border-bottom: 1px solid #cbd5e1;"><td style="padding:6px;">${index+1}</td><td style="padding:6px;">${m.fecha}</td><td><strong>${m.concepto}</strong></td><td>${txtRubro}</td><td>${m.origen}</td><td style="text-align:right; font-weight:700; color:${tipo==='gasto'?'#ef4444':'#10b981'}">${formatMoneda(m.monto)}</td></tr>`;
         });
-
-        contenedor.innerHTML = `<div style="padding:10px;"><h2>Reporte Diario de Caja</h2><table><thead><tr style="background:#0f172a; color:white;"><th style="padding:6px;">N°</th><th style="padding:6px;">Fecha</th><th style="padding:6px;">Detalle</th><th style="padding:6px;">Rubro</th><th style="padding:6px;">Cuentas</th><th style="text-align:right; padding:6px;">Monto</th></tr></thead><tbody>${filasHtml}</tbody></table></div>`;
+        contenedor.innerHTML = `<div style="padding:20px;"><h2>Libro Diario Sincronizado</h2><table><thead><tr style="background:#0f172a; color:white;"><th style="padding:6px;">N°</th><th style="padding:6px;">Fecha</th><th>Detalle</th><th>Rubro</th><th>Medio</th><th style="text-align:right;">Monto</th></tr></thead><tbody>${filasHtml}</tbody></table></div>`;
         window.print();
     }
 
     function render() {
+        const claveMesVisorRubros = document.getElementById('rubro-mes-visor').value;
+
+        // Renderizar Lista de Rubros con sus límites específicos del mes del visor
         DB.rubros.sort((a, b) => a.nombre.localeCompare(b.nombre));
         const listaRubros = document.getElementById('lista-rubros');
         listaRubros.innerHTML = '';
         DB.rubros.forEach(r => {
             const div = document.createElement('div'); div.className = 'compact-row';
-            const txtLimit = r.limite > 0 ? ` [Max ${formatMoneda(r.limite)}]` : '';
-            div.innerHTML = `<span><strong>${r.nombre}</strong> <span class="badge ${r.tipo}">${r.tipo[0]}</span><small style="color:var(--text-muted);">${txtLimit}</small></span><div class="actions-wrapper"><button class="btn-trigger edit-b">✏️</button><button class="btn-trigger danger del-b">🗑️</button></div>`;
-            div.querySelector('.edit-b').addEventListener('click', () => { editarRubro(r.id); switchTab('tab-rubros'); });
+            const limHistorico = obtenerLimiteHistoricoRubro(claveMesVisorRubros, r.id);
+            const txtLimit = limHistorico > 0 ? ` [Límite: ${formatMoneda(limHistorico)}]` : (r.tipo === 'gasto' ? ' [Sin límite]' : '');
+            
+            div.innerHTML = `<span><strong>${r.nombre}</strong> <span class="badge ${r.tipo}">${r.tipo[0]}</span><small style="color:var(--text-muted); font-weight:600;">${txtLimit}</small></span><div class="actions-wrapper"><button class="btn-trigger edit-b">✏️</button><button class="btn-trigger danger del-b">🗑️</button></div>`;
+            div.querySelector('.edit-b').addEventListener('click', () => { editarRubro(r.id); });
             div.querySelector('.del-b').addEventListener('click', () => eliminarRubro(r.id));
             listaRubros.appendChild(div);
         });
@@ -615,23 +624,15 @@
         document.getElementById('mov-transf-origen').innerHTML = opcionesCuentasHtml;
         document.getElementById('mov-transf-destino').innerHTML = opcionesCuentasHtml;
 
-        const filtroSelect = document.getElementById('filtro-avanzado');
-        const fFiltroAnterior = filtroSelect.value || 'all';
-        filtroSelect.innerHTML = `<option value="all">🔍 Todo</option><option value="gasto">🔻 Gastos</option><option value="ingreso">🔺 Ingresos</option><option value="transferencia">⇅ Transferencias</option><option value="f-efectivo">💵 Efec</option><option value="f-debito1">💳 ${DB.bancos.debito1}</option><option value="f-debito2">💳 ${DB.bancos.debito2}</option>`;
-        filtroSelect.value = fFiltroAnterior;
-
-        document.getElementById('label-hdr-debito1').textContent = DB.bancos.debito1;
-        document.getElementById('label-hdr-debito2').textContent = DB.bancos.debito2;
-
         let tIngresos = 0, tGastos = 0, balEfectivo = 0, balDebito1 = 0, balDebito2 = 0;
         let mapaMensual = {};
 
+        // Procesar transacciones y acumular por mes calendario
         DB.movimientos.forEach(m => {
             const rubro = DB.rubros.find(r => r.id === m.rubroId);
             const tipo = m.rubroId === 0 ? 'transferencia' : (rubro ? rubro.tipo : 'gasto');
             
-            if (tipo === 'ingreso') tIngresos += m.monto; 
-            else if (tipo === 'gasto') tGastos += m.monto;
+            if (tipo === 'ingreso') tIngresos += m.monto; else if (tipo === 'gasto') tGastos += m.monto;
 
             if (tipo === 'transferencia') {
                 if (m.origen === 'efectivo') balEfectivo -= m.monto; else if (m.origen === 'debito1') balDebito1 -= m.monto; else if (m.origen === 'debito2') balDebito2 -= m.monto;
@@ -640,9 +641,7 @@
                 if (m.origen === 'efectivo') { if (tipo === 'ingreso') balEfectivo += m.monto; else balEfectivo -= m.monto; }
                 else if (m.origen === 'debito1') { if (tipo === 'ingreso') balDebito1 += m.monto; else balDebito1 -= m.monto; }
                 else if (m.origen === 'debito2') { if (tipo === 'ingreso') balDebito2 += m.monto; else balDebito2 -= m.monto; }
-            }
-
-            if (tipo !== 'transferencia') {
+                
                 const infoMes = obtenerMesClave(m.fecha);
                 if (!mapaMensual[infoMes.orden]) {
                     mapaMensual[infoMes.orden] = { etiqueta: infoMes.etiqueta, ingresos: 0, gastos: 0, desgloseRubros: {} };
@@ -656,84 +655,90 @@
             }
         });
 
+        // Pintar Libro Diario
         const filtrados = obtenerMovimientosFiltrados();
-        const listaMovimientos = document.getElementById('lista-movimientos');
-        listaMovimientos.innerHTML = '';
-
+        const listaMovimientos = document.getElementById('lista-movimientos'); listaMovimientos.innerHTML = '';
         if (filtrados.length === 0) {
-            listaMovimientos.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted); font-size:11px;">Sin registros para esta selección.</div>`;
+            listaMovimientos.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted); font-size:11px;">Sin registros.</div>`;
         } else {
             [...filtrados].reverse().forEach(m => {
                 const rubro = DB.rubros.find(r => r.id === m.rubroId);
                 const tipo = m.rubroId === 0 ? 'transferencia' : (rubro ? rubro.tipo : 'gasto');
                 const nRubro = m.rubroId === 0 ? 'Traspaso' : (rubro ? rubro.nombre : 'S/R');
-                
-                let badgeClase = tipo;
-                let txtMedio = '';
-
-                if(tipo === 'transferencia') {
-                    badgeClase = 'transf';
-                    const tagO = m.origen === 'efectivo' ? 'EFEC' : (m.origen === 'debito1' ? DB.bancos.debito1.slice(0,4) : DB.bancos.debito2.slice(0,4));
-                    const tagD = m.destino === 'efectivo' ? 'EFEC' : (m.destino === 'debito1' ? DB.bancos.debito1.slice(0,4) : DB.bancos.debito2.slice(0,4));
-                    txtMedio = `<span class="badge wallet">${tagO} ➔ ${tagD}</span>`;
-                } else {
-                    let tagOrigen = m.origen === 'debito1' ? DB.bancos.debito1 : (m.origen === 'debito2' ? DB.bancos.debito2 : 'EFEC');
-                    txtMedio = `<span class="badge wallet" title="${tagOrigen}">${tagOrigen}</span>`;
-                }
-
+                let badgeClase = tipo === 'transferencia' ? 'transf' : tipo;
+                let txtMedio = tipo === 'transferencia' ? `<span class="badge wallet">${m.origen.slice(0,4)} ➔ ${m.destino.slice(0,4)}</span>` : `<span class="badge wallet">${m.origen}</span>`;
                 const div = document.createElement('div'); div.className = 'compact-row';
                 div.innerHTML = `<div><strong style="color:#0f172a;">${m.concepto}</strong><span style="color:var(--text-muted); font-size:10px; margin-left:4px;">${m.fecha}</span><br><span class="badge ${badgeClase}">${nRubro}</span>${txtMedio}</div><div class="actions-wrapper" style="align-items:center;"><span style="font-weight:700; margin-right:6px; color:var(--${tipo})">${tipo === 'gasto' ? '-' : (tipo === 'ingreso' ? '+' : '⇅')}${formatMoneda(m.monto)}</span><button class="btn-trigger danger del-m">🗑️</button></div>`;
                 div.querySelector('.del-m').addEventListener('click', () => eliminarMovimiento(m.id)); listaMovimientos.appendChild(div);
             });
         }
 
-        const listaReporte = document.getElementById('lista-reporte-mensual');
-        listaReporte.innerHTML = '';
+        // Renderizar Columna de Reportes y Monitoreo Histórico Cruzado
+        const listaReporte = document.getElementById('lista-reporte-mensual'); listaReporte.innerHTML = '';
         const mesesOrdenados = Object.keys(mapaMensual).sort().reverse();
         
+        let sumaPresupuestosMesActualBarra = 0;
+        let totalGastadoMesActualBarra = 0;
+        const hoy = new Date();
+        const claveMesActualSist = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+
         mesesOrdenados.forEach(clave => {
             const datos = mapaMensual[clave];
-            const balMensual = datos.ingresos - datos.gastos;
             let htmlPresupuestosInline = '';
-            
+            let totalPresupuestadoDelMes = 0;
+
             DB.rubros.forEach(rub => {
-                if(rub.tipo === 'gasto' && rub.limite > 0) {
-                    const gastadoEnRubro = datos.desgloseRubros[rub.id] || 0;
-                    const porcentaje = Math.min((gastadoEnRubro / rub.limite) * 100, 100);
-                    const colorBarra = porcentaje >= 100 ? 'var(--gasto)' : (porcentaje >= 85 ? 'var(--transferencia)' : 'var(--primary)');
-                    
-                    htmlPresupuestosInline += `
-                        <div class="budget-row-report">
-                            <div style="display:flex; justify-content:space-between; font-size:10px; font-weight:600;">
-                                <span style="color:#475569;">${rub.nombre}</span>
-                                <span style="color:${porcentaje >= 100 ? 'var(--gasto)' : '#1e293b'}">${formatMoneda(gastadoEnRubro)} / ${formatMoneda(rub.limite)}</span>
+                if(rub.tipo === 'gasto') {
+                    // Extraer el límite que le correspondía a este rubro en este mes puntual
+                    const limiteEsteRubroEsteMes = obtenerLimiteHistoricoRubro(clave, rub.id);
+                    if(limiteEsteRubroEsteMes > 0) {
+                        totalPresupuestadoDelMes += limiteEsteRubroEsteMes;
+                        const gastadoEnRubro = datos.desgloseRubros[rub.id] || 0;
+                        const porcentaje = Math.min((gastadoEnRubro / limiteEsteRubroEsteMes) * 100, 100);
+                        const colorBarra = porcentaje >= 100 ? 'var(--gasto)' : (porcentaje >= 85 ? 'var(--transferencia)' : 'var(--primary)');
+                        
+                        htmlPresupuestosInline += `
+                            <div class="budget-row-report">
+                                <div style="display:flex; justify-content:space-between; font-size:10px; font-weight:600;">
+                                    <span style="color:#475569;">${rub.nombre}</span>
+                                    <span style="color:${porcentaje >= 100 ? 'var(--gasto)' : '#1e293b'}">${formatMoneda(gastadoEnRubro)} / ${formatMoneda(limiteEsteRubroEsteMes)}</span>
+                                </div>
+                                <div class="budget-bar-bg"><div class="budget-bar-fill" style="width: ${porcentaje}%; background-color: ${colorBarra};"></div></div>
                             </div>
-                            <div class="budget-bar-bg">
-                                <div class="budget-bar-fill" style="width: ${porcentaje}%; background-color: ${colorBarra};"></div>
-                            </div>
-                        </div>
-                    `;
+                        `;
+                    }
                 }
             });
+
+            if (clave === claveMesActualSist) {
+                sumaPresupuestosMesActualBarra = totalPresupuestadoDelMes;
+                totalGastadoMesActualBarra = datos.gastos;
+            }
 
             const div = document.createElement('div'); div.className = 'month-card';
             div.innerHTML = `
                 <div class="month-header">${datos.etiqueta}</div>
-                <div class="month-data"><span>Ingresos:</span> <span style="color:var(--ingreso); font-weight:600;">+${formatMoneda(datos.ingresos)}</span></div>
-                <div class="month-data"><span>Gastos:</span> <span style="color:var(--gasto); font-weight:600;">-${formatMoneda(datos.gastos)}</span></div>
+                <div class="month-data"><span>Total Presupuestado Objetivos:</span> <span style="font-weight:600; color:var(--primary);">${formatMoneda(totalPresupuestadoDelMes)}</span></div>
+                <div class="month-data"><span>Gastos Realizados:</span> <span style="color:var(--gasto); font-weight:600;">-${formatMoneda(datos.gastos)}</span></div>
                 <div class="month-data" style="margin-top:4px; padding-top:4px; border-top:1px solid #e2e8f0; font-weight:700;">
-                    <span>Neto Período:</span> <span style="color:${balMensual >= 0 ? 'var(--ingreso)' : 'var(--gasto)'};">${formatMoneda(balMensual)}</span>
+                    <span>Neto Comercial (I-G):</span> <span style="color:${datos.ingresos - datos.gastos >= 0 ? 'var(--ingreso)' : 'var(--gasto)'};">${formatMoneda(datos.ingresos - datos.gastos)}</span>
                 </div>
-                ${htmlPresupuestosInline ? `<div style="margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:4px;"><strong style="font-size:10px; color:#64748b;">🎯 Monitoreo de Presupuestos:</strong>${htmlPresupuestosInline}</div>` : ''}
+                ${htmlPresupuestosInline ? `<div style="margin-top:6px; border-top:1px dashed #cbd5e1; padding-top:4px;">${htmlPresupuestosInline}</div>` : ''}
             `;
             listaReporte.appendChild(div);
         });
 
+        // Pintar la barra superior general del mes en curso
+        if(sumaPresupuestosMesActualBarra === 0) {
+            // Si el mes actual no tiene gastos registrados aún, calcular el preventivo basándose en el visor
+            DB.rubros.forEach(rub => { if(rub.tipo === 'gasto') sumaPresupuestosMesActualBarra += obtenerLimiteHistoricoRubro(claveMesActualSist, rub.id); });
+        }
+        const elBgral = document.getElementById('view-budget-general');
+        elBgral.textContent = `${formatMoneda(totalGastadoMesActualBarra)} / ${formatMoneda(sumaPresupuestosMesActualBarra)}`;
+        elBgral.style.color = totalGastadoMesActualBarra > sumaPresupuestosMesActualBarra ? 'var(--gasto)' : 'var(--primary)';
+
         const balanceTotal = tIngresos - tGastos;
         const bEl = document.getElementById('view-balance'); bEl.textContent = formatMoneda(balanceTotal); bEl.style.color = balanceTotal >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
-        document.getElementById('view-ingresos').textContent = formatMoneda(tIngresos);
-        document.getElementById('view-gastos').textContent = formatMoneda(tGastos);
-
         const elEf = document.getElementById('view-bal-efectivo'); elEf.textContent = formatMoneda(balEfectivo); elEf.style.color = balEfectivo >= 0 ? '' : 'var(--gasto)';
         const elD1 = document.getElementById('view-bal-debito1'); elD1.textContent = formatMoneda(balDebito1); elD1.style.color = balDebito1 >= 0 ? '' : 'var(--gasto)';
         const elD2 = document.getElementById('view-bal-debito2'); elD2.textContent = formatMoneda(balDebito2); elD2.style.color = balDebito2 >= 0 ? '' : 'var(--gasto)';
