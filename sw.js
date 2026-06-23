@@ -1,5 +1,5 @@
-// Firma de versión para control de ciclo de vida de la PWA (v12.0 NETWORK-FIRST)
-const CACHE_NAME = 'finanzas-pro-cache-v12.0';
+// Firma de versión para control de ciclo de vida de la PWA (v12.01 NETWORK-FIRST BLINDADO)
+const CACHE_NAME = 'finanzas-pro-cache-v12.01';
 const ASSETS = [
   './',
   './index.html',
@@ -37,13 +37,27 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+// ESTRATEGIA NETWORK-FIRST BLINDADA MEDIANTE CONSTRUCTOR DE REQUEST CON CLONACIÓN DE CONTEXTO
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
 
   const url = new URL(e.request.url);
   if (url.origin === self.location.origin) {
+    // Inyectamos el parámetro rompe-caché usando la API nativa de URL sin alterar las cabeceras HTTP
+    url.searchParams.set('v', Date.now().toString());
+
+    // Clonamos las propiedades de seguridad de la petición original inyectando no-store nativo
+    const networkRequest = new Request(url.toString(), {
+      method: e.request.method,
+      headers: e.request.headers,
+      mode: e.request.mode === 'navigate' ? 'same-origin' : e.request.mode,
+      credentials: e.request.credentials,
+      redirect: e.request.redirect,
+      cache: 'no-store'
+    });
+
     e.respondWith(
-      fetch(`${e.request.url}${e.request.url.includes('?') ? '&' : '?'}v=${Date.now()}`, { cache: 'no-store' })
+      fetch(networkRequest)
         .then((res) => {
           if (res.status === 200) {
             const resClone = res.clone();
@@ -52,6 +66,7 @@ self.addEventListener('fetch', (e) => {
           return res;
         })
         .catch(() => {
+          // Fallback offline estricto: si la red falla, se sirve del almacenamiento interno
           return caches.match(e.request);
         })
     );

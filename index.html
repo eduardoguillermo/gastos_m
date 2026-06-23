@@ -101,7 +101,6 @@
         .date-filter-group { flex: 1; }
         .date-filter-group input { padding: 3px 6px; font-size: 11px; }
 
-        /* Estilos del totalizador único simplificado corregido */
         .live-counter-strip {
             display: flex; justify-content: center; align-items: center; background: #f1f5f9; padding: 6px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 8px; font-size: 12px; font-weight: 700; flex-shrink: 0;
         }
@@ -166,7 +165,7 @@
 
 <div class="container">
     <header>
-        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v12.0 Enterprise-Ledger</small></h1>
+        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v12.01 Enterprise-Ledger</small></h1>
         
         <div class="balance-strip">
             <div class="strip-group">
@@ -341,11 +340,11 @@
 <div id="contenedor-impresion-pwa"></div>
 
 <script>
-    const SKEY = 'finanzas-pro-compact-v12'; 
+    const SKEY = 'finanzas-pro-compact-v12.01'; 
     const ITEMS_PER_PAGE = 40;
 
     let DB = {
-        version: 12,
+        version: 12.01,
         nid: 1,
         rubros: [
             { id: 1, nombre: 'Sueldo', tipo: 'ingreso' },
@@ -361,7 +360,7 @@
     let currentLimitMovimientos = ITEMS_PER_PAGE;
 
     window.onload = function() {
-        const legacyKeys = ['finanzas-pro-compact-v11', 'finanzas-pro-compact-v10', 'finanzas-pro-compact-v9'];
+        const legacyKeys = ['finanzas-pro-compact-v12', 'finanzas-pro-compact-v11', 'finanzas-pro-compact-v10', 'finanzas-pro-compact-v9'];
         let rawData = localStorage.getItem(SKEY);
         
         if(!rawData) {
@@ -406,7 +405,6 @@
 
     function ejecutarMigracionesInternas(data) {
         if (!data.version) data.version = 8; 
-        
         if (data.version === 8) { data.presupuestosHistoricos = data.presupuestosHistoricos || {}; data.version = 9; }
         if (data.version === 9) {
             data.version = 10;
@@ -417,6 +415,7 @@
         }
         if (data.version === 10) { data.version = 11; }
         if (data.version === 11) { data.version = 12; }
+        if (data.version === 12) { data.version = 12.01; }
         return data;
     }
 
@@ -589,7 +588,7 @@
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB, null, 2));
         const downloadAnchor = document.createElement('a');
         const ahora = new Date();
-        const fechaSello = SecuritySello = ahora.toISOString().slice(0,10);
+        const fechaSello = ahora.toISOString().slice(0,10);
         const horaSello = ahora.toTimeString().slice(0,8).replace(/:/g, '-');
         downloadAnchor.setAttribute("href", dataStr); 
         downloadAnchor.setAttribute("download", `backup_contable_${fechaSello}_${horaSello}.json`);
@@ -632,7 +631,8 @@
 
     function forzarRecargaPWA() { window.location.reload(); }
 
-    function formatMoneda(valor) { return '$' + valor.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+    // Corrección estricta para evitar inconsistencias en el formateador
+    function formatMoneda(valor) { return '$' + Number(valor).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
 
     function parseStringToDate(fechaStr) {
         if(!fechaStr) return null;
@@ -767,7 +767,6 @@
         `;
         filtroSelect.value = fFiltroAnterior;
 
-        // --- PIPELINE TOTALIZADOR MATEMÁTICO ÚNICO FILTRADO ---
         const filtrados = obtenerMovimientosFiltrados();
         const fValorActivo = filtroSelect.value || 'all';
         
@@ -778,10 +777,8 @@
             const tipo = m.rubroId === 0 ? 'transferencia' : (rubro ? rubro.tipo : 'gasto');
             
             if (fValorActivo === 'gasto' || fValorActivo === 'ingreso') {
-                // Si el filtro fuerza un tipo puro, sumamos el valor absoluto llanamente
                 sumaAcumuladaFiltrada += m.monto;
             } else if (fValorActivo.startsWith('f-')) {
-                // Si filtramos por cuenta, calculamos el impacto neto exacto en dicha cuenta
                 const targetCuenta = fValorActivo.replace('f-', '');
                 if (tipo === 'transferencia') {
                     if (m.origen === targetCuenta) sumaAcumuladaFiltrada -= m.monto;
@@ -792,7 +789,6 @@
                     }
                 }
             } else {
-                // Filtro "Todo" o "Transferencias": Computa el neto comercial directo (I-G)
                 if (tipo === 'ingreso') sumaAcumuladaFiltrada += m.monto;
                 else if (tipo === 'gasto') sumaAcumuladaFiltrada -= m.monto;
             }
@@ -800,7 +796,6 @@
 
         const elTotalUnico = document.getElementById('live-total-unico');
         elTotalUnico.textContent = formatMoneda(Math.abs(sumaAcumuladaFiltrada));
-        // Estilo adaptativo simple según el signo real del flujo computado
         if (fValorActivo === 'gasto') elTotalUnico.style.color = 'var(--gasto)';
         else if (fValorActivo === 'ingreso') elTotalUnico.style.color = 'var(--ingreso)';
         else elTotalUnico.style.color = sumaAcumuladaFiltrada >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
