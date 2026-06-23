@@ -1,66 +1,61 @@
-const CACHE_NAME = 'finanzaspro-network-first-v5';
+const CACHE_NAME = 'finanzas-pro-v9';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json'
 ];
 
-// 1. Instalación: Guarda la estructura base de forma preventiva
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('PWA NW-First: Cacheando archivos base');
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
       return cache.addAll(ASSETS);
     }).then(() => self.skipWaiting())
   );
 });
 
-// 2. Activación: Limpia de inmediato las estrategias viejas (Cache-First)
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => {
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log('PWA NW-First: Eliminando caché obsoleto:', key);
-            return caches.delete(key);
-          }
+        keys.map(key => {
+          if (key !== CACHE_NAME) return caches.delete(key);
         })
       );
     }).then(() => self.clients.claim())
   );
 });
 
-// 3. Intercepción con Estrategia NETWORK FIRST
-self.addEventListener('fetch', (e) => {
-  // Ignorar peticiones que no correspondan al origen de la app o sus recursos vectoriales
-  if (!e.request.url.startsWith(self.location.origin)) {
-    return;
-  }
+// ESTRATEGIA: NETWORK FIRST CON ROMPE-CACHÉ DINÁMICO
+self.addEventListener('fetch', event => {
+  // Solo aplicamos el rompe-caché a nuestro archivo index o rutas del mismo dominio
+  if (event.request.method === 'GET' && event.request.url.includes(self.location.origin)) {
+    
+    // Creamos una nueva URL agregando un timestamp (?v=123456789) para saltarse el caché del servidor
+    const urlModificada = new URL(event.request.url);
+    urlModificada.searchParams.set('v', Date.now());
 
-  e.respondWith(
-    // Paso 1: Intentar ir siempre a buscar el recurso fresco a internet
-    fetch(e.request).then((networkResponse) => {
-      // Si la red responde bien, actualizamos dinámicamente el caché con la nueva copia
-      if (networkResponse.status === 200) {
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(e.request, responseToCache);
-        });
-      }
-      return networkResponse;
-    }).catch(() => {
-      // Paso 2: SI LA RED FALLA (Offline), busca el respaldo en el caché local
-      console.log('PWA NW-First: Modo offline detectado. Sirviendo desde caché:', e.request.url);
-      return caches.match(e.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        // Fallback definitivo para la navegación principal si nada funciona
-        if (e.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
-    })
-  );
+    event.respondWith(
+      fetch(urlModificada)
+        .then(networkResponse => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              // Guardamos en caché con la URL original para que mantenga la coherencia offline
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(event.request);
+        })
+    );
+  } else {
+    // Para el resto de peticiones externas (CDN, fuentes, etc.) funciona normal
+    event.respondWith(
+      fetch(event.request)
+        .then(networkResponse => networkResponse)
+        .catch(() => caches.match(event.request))
+    );
+  }
 });
