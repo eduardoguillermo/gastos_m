@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FinanzasPro - Matrix Budget Edition</title>
     
+    <link class="apple-touch-icon" href="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=192&h=192&fit=crop&auto=format">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link class="apple-touch-icon" href="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=192&h=192&fit=crop&auto=format">
 
     <style>
         :root {
@@ -165,19 +165,19 @@
         <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v10.0 Enterprise-Ledger</small></h1>
         
         <div class="balance-strip">
-            <!-- GRUPO 1: MÉTRICAS DE PRESUPUESTO (MES ACTUAL) -->
+            <!-- GRUPO 1: MÉTRICAS DE CONTROL PRESUPUESTARIO (MES ACTUAL) -->
             <div class="strip-group">
                 <span class="strip-group-title">🎯 Presupuesto</span>
-                <div class="balance-item">Neto: <b id="view-balance">$0,00</b></div>
-                <div style="width:1px; height:10px; background:var(--border);"></div>
                 <div class="balance-item">Límites: <b id="view-budget-general" style="color: var(--primary);">$0,00</b></div>
                 <div style="width:1px; height:10px; background:var(--border);"></div>
                 <div class="balance-item">Restan: <b id="view-budget-restante" style="color: var(--ingreso);">$0,00</b></div>
             </div>
 
-            <!-- GRUPO 2: TENENCIAS LÍQUIDAS (SALDOS REALES) -->
+            <!-- GRUPO 2: TENENCIAS REALES Y ACTIVOS LÍQUIDOS (CORREGIDO) -->
             <div class="strip-group">
                 <span class="strip-group-title">💰 Tenencias</span>
+                <div class="balance-item">Neto: <b id="view-balance">$0,00</b></div>
+                <div style="width:1px; height:10px; background:var(--border);"></div>
                 <div class="balance-item">💵 Efec: <b id="view-bal-efectivo">$0,00</b></div>
                 <div style="width:1px; height:10px; background:var(--border);"></div>
                 <div class="balance-item">💳 <span id="label-hdr-debito1">Banco 1</span>: <b id="view-bal-debito1">$0,00</b></div>
