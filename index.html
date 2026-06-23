@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FinanzasPro - Enterprise Edition</title>
     
+    <!-- Vinculación de PWA con rutas adaptadas a GitHub Pages -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -52,7 +53,6 @@
         .balance-item { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; color: var(--text-muted); }
         .balance-item b { font-size: 13px; font-weight: 700; color: var(--text-main); }
         
-        /* Workspace Grid Optimizado de 3 columnas (Pestañas operativas + Libro + Reportes) */
         .workspace-grid { 
             display: grid; grid-template-columns: 320px 1fr 340px; gap: 8px; flex-grow: 1; min-height: 0;
         }
@@ -67,7 +67,6 @@
         }
         .panel h3 { font-size: 12px; font-weight: 700; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border); color: #334155; flex-shrink: 0; }
         
-        /* Selector de pestañas superiores */
         .tabs-header { display: flex; gap: 2px; background: #e2e8f0; padding: 3px; border-radius: 6px; margin-bottom: 10px; flex-shrink: 0; }
         .tab-btn { flex: 1; background: transparent; border: none; padding: 6px; font-size: 11px; font-weight: 700; color: var(--text-muted); cursor: pointer; border-radius: 4px; text-align: center; }
         .tab-btn.active { background: white; color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -106,12 +105,10 @@
         }
         .compact-row:hover { background: #f1f5f9; }
         
-        /* Tarjetas de Reporte Mensual con barras de Presupuesto */
         .month-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px; }
         .month-header { font-weight: 700; color: #1e293b; border-bottom: 1px dashed var(--border); padding-bottom: 3px; margin-bottom: 5px; text-transform: capitalize; }
         .month-data { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; }
         
-        /* Línea de rubro con presupuesto en vivo */
         .budget-row-report { margin-top: 5px; padding: 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; }
         .budget-bar-bg { width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; margin-top: 3px; overflow: hidden; }
         .budget-bar-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.3s ease; }
@@ -147,7 +144,7 @@
 
 <div class="container">
     <header>
-        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v6.0 Tabs & Budgets</small></h1>
+        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v6.0 Universal-Core</small></h1>
         
         <div class="balance-strip">
             <div class="balance-item">Neto Total: <b id="view-balance">$0,00</b></div>
@@ -299,7 +296,7 @@
 <div id="contenedor-impresion-pwa"></div>
 
 <script>
-    const SKEY = 'finanzas-pro-compact-v7'; // Llave de evolución
+    const SKEY = 'finanzas-pro-compact-v7';
 
     let DB = {
         nid: 1,
@@ -316,7 +313,6 @@
         if (localStorage.getItem(SKEY)) {
             try { 
                 DB = JSON.parse(localStorage.getItem(SKEY)); 
-                // Asegurar retrocompatibilidad de propiedades
                 if(!DB.bancos) DB.bancos = { debito1: 'Banco 1', debito2: 'Banco 2' };
                 DB.rubros.forEach(r => { if(r.limite === undefined) r.limite = 0; });
             } catch(e) {}
@@ -340,7 +336,6 @@
 
     function save() { localStorage.setItem(SKEY, JSON.stringify(DB)); }
 
-    // Control del conmutador de solapas/pestañas
     function switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -434,9 +429,9 @@
                 id: DB.nid++,
                 concepto: conceptoInput.value.trim() || 'Transferencia de Fondos',
                 monto: monto,
-                rubroId: 0, // Identificador neutral de traspaso
+                rubroId: 0,
                 origen: origen,
-                destino: destino, // Nueva propiedad bidireccional
+                destino: destino,
                 fecha: new Date().toLocaleDateString()
             });
         } else {
@@ -467,23 +462,55 @@
         document.body.appendChild(downloadAnchor); downloadAnchor.click(); downloadAnchor.remove();
     }
 
+    // --- MOTOR DE IMPORTACIÓN UNIVERSAL COMPATIBLE ---
     function importarBackup(event) {
         const reader = new FileReader();
         reader.onload = function() {
             try {
                 const parsed = JSON.parse(reader.result);
                 if (parsed.rubros && parsed.movimientos) {
-                    if (confirm('¿Restaurar copia?')) {
-                        DB = parsed;
-                        if (!DB.bancos) DB.bancos = { debito1: 'Banco 1', debito2: 'Banco 2' };
-                        DB.movimientos.forEach(m => { if (!m.origen) m.origen = 'efectivo'; });
-                        DB.rubros.forEach(r => { if(r.limite === undefined) r.limite = 0; });
-                        save(); render(); alert('Carga exitosa.');
+                    if (confirm('Se detectó una copia de respaldo. ¿Desea restaurar todos los datos históricos?')) {
+                        
+                        DB = {
+                            nid: parsed.nid || 1,
+                            rubros: parsed.rubros,
+                            movimientos: parsed.movimientos,
+                            bancos: parsed.bancos || { debito1: 'Banco 1', debito2: 'Banco 2' }
+                        };
+
+                        DB.rubros.forEach(r => { 
+                            if(r.limite === undefined) r.limite = 0; 
+                        });
+
+                        DB.movimientos.forEach(m => { 
+                            if (!m.origen) m.origen = 'efectivo'; 
+                            if (m.destino === undefined) m.destino = null;
+                        });
+
+                        if(DB.movimientos.length > 0) {
+                            const maxId = Math.max(...DB.movimientos.map(m => m.id), ...DB.rubros.map(r => r.id));
+                            DB.nid = maxId + 1;
+                        }
+
+                        document.getElementById('cfg-debito1').value = DB.bancos.debito1;
+                        document.getElementById('cfg-debito2').value = DB.bancos.debito2;
+
+                        save(); 
+                        render();
+                        alert('¡Base de datos restaurada con éxito! Todo tu historial volvió a la vida.');
                     }
-                }
-            } catch(e) { alert('Error de lectura.'); }
+                } else { alert('El archivo no tiene el formato contable válido de FinanzasPro.'); }
+            } catch(e) { alert('Error crítico al procesar el archivo JSON: ' + e.message); }
         };
         if(event.target.files[0]) reader.readAsText(event.target.files[0]);
+        event.target.value = '';
+    }
+
+    if ('serviceWorker' in navigator) {
+        const repoPath = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
+        navigator.serviceWorker.register(repoPath + 'sw.js', { scope: repoPath })
+            .then(reg => console.log('✅ PWA activa'))
+            .catch(err => console.error('❌ Error PWA:', err));
     }
 
     function formatMoneda(valor) { return '$' + valor.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
@@ -566,7 +593,6 @@
     }
 
     function render() {
-        // Renderizar pestaña de Rubros (Mantener orden alfabético estricto)
         DB.rubros.sort((a, b) => a.nombre.localeCompare(b.nombre));
         const listaRubros = document.getElementById('lista-rubros');
         listaRubros.innerHTML = '';
@@ -579,7 +605,6 @@
             listaRubros.appendChild(div);
         });
 
-        // Sincronizar Selectores del Formulario
         const rubroSelect = document.getElementById('mov-rubro'); rubroSelect.innerHTML = '';
         DB.rubros.forEach(r => {
             const opt = document.createElement('option'); opt.value = r.id; opt.textContent = `${r.nombre} (${r.tipo[0].toUpperCase()})`; rubroSelect.appendChild(opt);
@@ -590,7 +615,6 @@
         document.getElementById('mov-transf-origen').innerHTML = opcionesCuentasHtml;
         document.getElementById('mov-transf-destino').innerHTML = opcionesCuentasHtml;
 
-        // Sincronizar Opciones de Filtros
         const filtroSelect = document.getElementById('filtro-avanzado');
         const fFiltroAnterior = filtroSelect.value || 'all';
         filtroSelect.innerHTML = `<option value="all">🔍 Todo</option><option value="gasto">🔻 Gastos</option><option value="ingreso">🔺 Ingresos</option><option value="transferencia">⇅ Transferencias</option><option value="f-efectivo">💵 Efec</option><option value="f-debito1">💳 ${DB.bancos.debito1}</option><option value="f-debito2">💳 ${DB.bancos.debito2}</option>`;
@@ -599,9 +623,8 @@
         document.getElementById('label-hdr-debito1').textContent = DB.bancos.debito1;
         document.getElementById('label-hdr-debito2').textContent = DB.bancos.debito2;
 
-        // Computación Contable Integral de Doble Entrada
         let tIngresos = 0, tGastos = 0, balEfectivo = 0, balDebito1 = 0, balDebito2 = 0;
-        let mapaMensual = {}; // Estructura: { "2026-06": { etiqueta: "Junio 2026", ingresos: 0, gastos: 0, rubros: { rubroId: subtotal } } }
+        let mapaMensual = {};
 
         DB.movimientos.forEach(m => {
             const rubro = DB.rubros.find(r => r.id === m.rubroId);
@@ -610,7 +633,6 @@
             if (tipo === 'ingreso') tIngresos += m.monto; 
             else if (tipo === 'gasto') tGastos += m.monto;
 
-            // Ajuste dinámico de cuentas de doble entrada (Soporta transferencias directas sin tocar balances globales)
             if (tipo === 'transferencia') {
                 if (m.origen === 'efectivo') balEfectivo -= m.monto; else if (m.origen === 'debito1') balDebito1 -= m.monto; else if (m.origen === 'debito2') balDebito2 -= m.monto;
                 if (m.destino === 'efectivo') balEfectivo += m.monto; else if (m.destino === 'debito1') balDebito1 += m.monto; else if (m.destino === 'debito2') balDebito2 += m.monto;
@@ -620,7 +642,6 @@
                 else if (m.origen === 'debito2') { if (tipo === 'ingreso') balDebito2 += m.monto; else balDebito2 -= m.monto; }
             }
 
-            // Agrupación mensual y de presupuestos en línea
             if (tipo !== 'transferencia') {
                 const infoMes = obtenerMesClave(m.fecha);
                 if (!mapaMensual[infoMes.orden]) {
@@ -635,7 +656,6 @@
             }
         });
 
-        // Pintar el Libro Diario con la porción filtrada
         const filtrados = obtenerMovimientosFiltrados();
         const listaMovimientos = document.getElementById('lista-movimientos');
         listaMovimientos.innerHTML = '';
@@ -667,7 +687,6 @@
             });
         }
 
-        // Renderizar Columna de Reporte Mensual y Monitoreo de Presupuestos en Vivo
         const listaReporte = document.getElementById('lista-reporte-mensual');
         listaReporte.innerHTML = '';
         const mesesOrdenados = Object.keys(mapaMensual).sort().reverse();
@@ -675,10 +694,8 @@
         mesesOrdenados.forEach(clave => {
             const datos = mapaMensual[clave];
             const balMensual = datos.ingresos - datos.gastos;
-            
             let htmlPresupuestosInline = '';
             
-            // Cruzar en vivo los gastos mensuales vs los presupuestos configurados por el usuario
             DB.rubros.forEach(rub => {
                 if(rub.tipo === 'gasto' && rub.limite > 0) {
                     const gastadoEnRubro = datos.desgloseRubros[rub.id] || 0;
@@ -712,7 +729,6 @@
             listaReporte.appendChild(div);
         });
 
-        // Actualizar Cabecera de Balances Generales Sincronizados
         const balanceTotal = tIngresos - tGastos;
         const bEl = document.getElementById('view-balance'); bEl.textContent = formatMoneda(balanceTotal); bEl.style.color = balanceTotal >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
         document.getElementById('view-ingresos').textContent = formatMoneda(tIngresos);
