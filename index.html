@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.19 · Ledger Edition</div>
+    <div class="splash-version">v13.20 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -414,6 +414,7 @@
                 <button class="tab-btn active" data-tab="tab-carga">✍️ Carga</button>
                 <button class="tab-btn" data-tab="tab-rubros">📁 Rubros</button>
                 <button class="tab-btn" data-tab="tab-bancos">🏦 Cuentas</button>
+                <button class="tab-btn" data-tab="tab-historial" onclick="renderHistorial()">📅 Historial</button>
             </div>
 
             <!-- TAB CARGA -->
@@ -611,7 +612,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.19';
+const APP_VERSION = '13.20';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -2064,4 +2065,5 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+
 
