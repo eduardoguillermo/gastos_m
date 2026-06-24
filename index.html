@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.09 · Ledger Edition</div>
+    <div class="splash-version">v13.10 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -376,7 +376,7 @@
     <header>
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
-            <span class="hdr-version" id="hdr-version">v13.09</span>
+            <span class="hdr-version" id="hdr-version">v13.10</span>
         </div>
 
         <div class="balance-strip">
@@ -590,7 +590,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.09';
+const APP_VERSION = '13.10';
 const SKEY        = 'finanzas-pro-v13';
 const LEGACY_KEYS = [
     'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
@@ -1568,10 +1568,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
     render();
 
-    // Restaurar carpeta de backup guardada en sesiones anteriores
-    restaurarCarpetaGuardada();
-
-    // Mínimo 600ms visible + doble rAF para que la transición CSS corra bien
+    // Splash: cierre independiente — no depende de async (restaurarCarpetaGuardada)
     const splash = document.getElementById('splash');
     setTimeout(() => {
         requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -1579,6 +1576,9 @@ window.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => splash.remove(), 320);
         }));
     }, 600);
+
+    // Restaurar carpeta DESPUÉS de cerrar splash para no interferir
+    setTimeout(() => restaurarCarpetaGuardada(), 700);
 });
 </script>
 </body>
