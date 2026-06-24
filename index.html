@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.25 · Ledger Edition</div>
+    <div class="splash-version">v13.26 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -620,7 +620,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.25';
+const APP_VERSION = '13.26';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1542,7 +1542,7 @@ function actualizarRubrosRapidos() {
 function renderTop5Rubros() {
     const el = document.getElementById('top5-rubros');
     if (!el) return;
-    const mesActual = claveMesActual;
+    const mesActual = hoyISO().slice(0,7);
     const gastosPorRubro = {};
     DB.movimientos.filter(m => m.tipo === 'gasto' && claveMesDeISO(m.fecha) === mesActual).forEach(m => {
         gastosPorRubro[m.rubroId] = (gastosPorRubro[m.rubroId]||0) + (parseFloat(m.monto)||0);
