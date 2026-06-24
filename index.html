@@ -350,7 +350,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.00 · Ledger Edition</div>
+    <div class="splash-version">v13.01 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -375,7 +375,7 @@
     <header>
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
-            <span class="hdr-version" id="hdr-version">v13.00</span>
+            <span class="hdr-version" id="hdr-version">v13.01</span>
         </div>
 
         <div class="balance-strip">
@@ -583,7 +583,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.00';
+const APP_VERSION = '13.01';
 const SKEY        = 'finanzas-pro-v13';
 const LEGACY_KEYS = [
     'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
@@ -1419,12 +1419,14 @@ window.addEventListener('DOMContentLoaded', function() {
 
     render();
 
-    // Doble rAF: garantiza que el browser pintó el splash antes de iniciار la transición
+    // Mínimo 600ms visible + doble rAF para que la transición CSS corra bien
     const splash = document.getElementById('splash');
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-        splash.classList.add('fade-out');
-        setTimeout(() => splash.remove(), 320);
-    }));
+    setTimeout(() => {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            splash.classList.add('fade-out');
+            setTimeout(() => splash.remove(), 320);
+        }));
+    }, 600);
 });
 </script>
 </body>
