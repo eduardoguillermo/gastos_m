@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.07 · Ledger Edition</div>
+    <div class="splash-version">v13.08 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -376,7 +376,7 @@
     <header>
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
-            <span class="hdr-version" id="hdr-version">v13.07</span>
+            <span class="hdr-version" id="hdr-version">v13.08</span>
         </div>
 
         <div class="balance-strip">
@@ -571,10 +571,12 @@
     <footer>
         <div class="footer-left">
             <span style="color:var(--text-muted)" id="db-status">Almacenamiento local activo</span>
+            <span id="carpeta-status" style="display:none; font-size:10px; color:var(--ingreso); font-weight:700;"></span>
             <span id="storage-warning" class="storage-warn">⚠️ Almacenamiento lleno</span>
             <span id="pwa-update-toast" class="pwa-update-pill" onclick="forzarRecargaPWA()">🔄 Actualización disponible</span>
         </div>
         <div class="footer-right">
+            <button class="btn-secondary btn-sm" id="btn-carpeta" onclick="seleccionarCarpetaBackup()" title="Vincular carpeta para backup automático">📂 Carpeta</button>
             <button class="btn-secondary btn-sm" onclick="exportarBackup()">📥 Exportar</button>
             <button class="btn-secondary btn-sm" onclick="document.getElementById('file-import').click()">📤 Importar</button>
             <input type="file" id="file-import" accept=".json" style="display:none" onchange="importarBackup(event)">
@@ -588,7 +590,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.07';
+const APP_VERSION = '13.08';
 const SKEY        = 'finanzas-pro-v13';
 const LEGACY_KEYS = [
     'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
@@ -1030,6 +1032,68 @@ function guardarCuentas() {
 // ════════════════════════════════════════════════════
 //  BACKUP
 // ════════════════════════════════════════════════════
+// ── File System Access API ─────────────────────────
+let _dirHandle = null; // handle de carpeta vinculada (persiste en sesión)
+
+async function seleccionarCarpetaBackup() {
+    if (!('showDirectoryPicker' in window)) {
+        toast('Tu browser no soporta esta función. Usá Chrome o Brave.', 'error', 4000);
+        return;
+    }
+    try {
+        _dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        actualizarEstadoCarpeta();
+        toast(`Carpeta "${_dirHandle.name}" vinculada. Se guardará al cerrar.`, 'success', 3500);
+        // Guardar de inmediato al vincular
+        await guardarEnCarpeta();
+    } catch(e) {
+        if (e.name !== 'AbortError') toast('No se pudo acceder a la carpeta.', 'error');
+    }
+}
+
+function actualizarEstadoCarpeta() {
+    const el = document.getElementById('carpeta-status');
+    const btn = document.getElementById('btn-carpeta');
+    if (_dirHandle) {
+        el.textContent = `📂 ${_dirHandle.name}`;
+        el.style.display = 'inline';
+        btn.style.background = 'var(--ingreso-bg)';
+        btn.style.color = 'var(--ingreso)';
+        btn.style.borderColor = 'var(--ingreso)';
+        btn.title = `Carpeta vinculada: ${_dirHandle.name}. Click para cambiar.`;
+    } else {
+        el.style.display = 'none';
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+        btn.title = 'Vincular carpeta para backup automático';
+    }
+}
+
+async function guardarEnCarpeta() {
+    if (!_dirHandle) return false;
+    try {
+        const ahora = new Date();
+        const sello = ahora.toISOString().slice(0,10); // YYYY-MM-DD
+        const nombre = `finanzaspro_backup_${sello}.json`;
+        const fileHandle = await _dirHandle.getFileHandle(nombre, { create: true });
+        const writable   = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(DB, null, 2));
+        await writable.close();
+        return true;
+    } catch(e) {
+        console.error('Error guardando en carpeta:', e);
+        return false;
+    }
+}
+
+// Backup automático al cerrar/salir de la página
+window.addEventListener('beforeunload', async (e) => {
+    if (_dirHandle) {
+        guardarEnCarpeta(); // sin await — mejor esfuerzo
+    }
+});
+
 function exportarBackup() {
     const ahora  = new Date();
     const sello  = ahora.toISOString().slice(0,19).replace(/[:T]/g, '-');
@@ -1041,6 +1105,8 @@ function exportarBackup() {
     a.click();
     URL.revokeObjectURL(url);
     toast('Backup exportado.', 'success');
+    // Si hay carpeta vinculada, guardar también ahí
+    if (_dirHandle) guardarEnCarpeta();
 }
 
 function importarBackup(event) {
