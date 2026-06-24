@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.11 · Ledger Edition</div>
+    <div class="splash-version">v13.12 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -376,7 +376,7 @@
     <header>
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
-            <span class="hdr-version" id="hdr-version">v13.11</span>
+            <span class="hdr-version" id="hdr-version">v13.12</span>
         </div>
 
         <div class="balance-strip">
@@ -590,7 +590,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.11';
+const APP_VERSION = '13.12';
 const SKEY        = 'finanzas-pro-v13';
 const LEGACY_KEYS = [
     'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
@@ -653,6 +653,8 @@ function showConfirm(title, body, confirmLabel = 'Confirmar', danger = true) {
 // ════════════════════════════════════════════════════
 //  PERSISTENCIA
 // ════════════════════════════════════════════════════
+let _folderSaveTimer = null;
+
 function save() {
     clearTimeout(_saveTimer);
     _saveTimer = setTimeout(saveImmediate, 300);
@@ -665,6 +667,11 @@ function saveImmediate() {
         if (e.name === 'QuotaExceededError' || e.code === 22) {
             document.getElementById('storage-warning').style.display = 'inline-block';
         }
+    }
+    // Guardar en carpeta vinculada (debounce 5s para no saturar en carga masiva)
+    if (_dirHandle) {
+        clearTimeout(_folderSaveTimer);
+        _folderSaveTimer = setTimeout(() => guardarEnCarpeta(), 5000);
     }
 }
 
@@ -1161,10 +1168,8 @@ async function guardarEnCarpeta() {
     }
 }
 
-// Backup automático al cerrar
-window.addEventListener('beforeunload', () => {
-    if (_dirHandle) guardarEnCarpeta();
-});
+// beforeunload omitido — async no garantizado al cerrar con X en Brave/Chrome
+// El backup se hace automáticamente en cada saveImmediate() con debounce de 5s
 
 function exportarBackup() {
     const ahora  = new Date();
