@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.16 · Ledger Edition</div>
+    <div class="splash-version">v13.17 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -376,7 +376,7 @@
     <header>
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
-            <span class="hdr-version" id="hdr-version">v13.16</span>
+            <span class="hdr-version" id="hdr-version">${APP_VERSION}</span>
         </div>
 
         <div class="balance-strip">
@@ -579,6 +579,8 @@
             <button class="btn-secondary btn-sm" id="btn-carpeta" onclick="seleccionarCarpetaBackup()" title="Vincular carpeta para backup automático">📂 Carpeta</button>
             <button class="btn-secondary btn-sm" onclick="exportarBackup()">📥 Exportar</button>
             <button class="btn-secondary btn-sm" onclick="document.getElementById('file-import').click()">📤 Importar</button>
+            <button class="btn-secondary btn-sm" onclick="gmMostrarSnapshots()" title="Ver/restaurar snapshots locales" style="background:#0f766e;color:white;border-color:#0f766e;">💾 Local</button>
+            <button class="btn-secondary btn-sm" onclick="gmSalir()" title="Guardar y salir" style="background:#334155;color:white;border-color:#334155;">🚪 Salir</button>
             <input type="file" id="file-import" accept=".json" style="display:none" onchange="importarBackup(event)">
         </div>
     </footer>
@@ -590,7 +592,95 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.16';
+const APP_VERSION = '13.17';
+
+// ── Snapshots locales ─────────────────────────────────────────────────────
+const GM_BKUP_KEY = 'gm_backups';
+const GM_BKUP_MAX = 10;
+function gmCargarSnapshots() { try { return JSON.parse(localStorage.getItem(GM_BKUP_KEY)) || []; } catch(e) { return []; } }
+function gmGuardarSnapshots(b) { try { localStorage.setItem(GM_BKUP_KEY, JSON.stringify(b)); } catch(e) {} }
+function gmHacerSnapshot(manual=false) {
+    try {
+        const bkups = gmCargarSnapshots();
+        bkups.unshift({ ts: Date.now(), manual, label: manual ? 'Manual' : 'Automático', data: JSON.stringify(DB) });
+        if(bkups.length > GM_BKUP_MAX) {
+            const idxAuto = [...bkups.map((b,i)=>({b,i}))].reverse().find(x=>!x.b.manual);
+            if(idxAuto) bkups.splice(idxAuto.i, 1); else bkups.pop();
+        }
+        gmGuardarSnapshots(bkups);
+    } catch(e) {}
+}
+function gmFmtTs(ts) {
+    const d = new Date(ts);
+    return d.toLocaleDateString('es-AR') + ' ' + d.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
+}
+function gmRestaurarSnapshot(ts) {
+    if(!confirm('¿Restaurar este snapshot? El estado actual se guardará antes.')) return;
+    gmHacerSnapshot(false);
+    const bkup = gmCargarSnapshots().find(b=>b.ts===ts);
+    if(!bkup) { alert('Snapshot no encontrado'); return; }
+    try {
+        DB = migrar(JSON.parse(bkup.data));
+        saveImmediate();
+        document.getElementById('modal-gm-snapshots')?.remove();
+        render();
+        alert('✅ Snapshot restaurado: ' + gmFmtTs(ts));
+    } catch(e) { alert('Error al restaurar: ' + e.message); }
+}
+function gmBorrarSnapshot(ts) {
+    if(!confirm('¿Eliminar este snapshot?')) return;
+    gmGuardarSnapshots(gmCargarSnapshots().filter(b=>b.ts!==ts));
+    gmMostrarSnapshots();
+}
+function gmMostrarSnapshots() {
+    document.getElementById('modal-gm-snapshots')?.remove();
+    const bkups = gmCargarSnapshots();
+    const rows = bkups.length ? bkups.map(b=>`
+        <tr>
+            <td style="padding:8px 6px;font-size:13px;">${gmFmtTs(b.ts)}</td>
+            <td style="padding:8px 6px;font-size:12px;color:${b.manual?'#15803d':'#6b7280'};">${b.label}</td>
+            <td style="padding:8px 6px;text-align:right;">
+                <button onclick="gmRestaurarSnapshot(${b.ts})" style="background:#0f766e;color:white;border:none;border-radius:4px;padding:3px 10px;font-size:12px;cursor:pointer;margin-right:4px;">Restaurar</button>
+                <button onclick="gmBorrarSnapshot(${b.ts})" style="background:#dc2626;color:white;border:none;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer;">✕</button>
+            </td>
+        </tr>`).join('') : '<tr><td colspan="3" style="padding:16px;text-align:center;color:#94a3b8;">Sin snapshots guardados</td></tr>';
+    const ov = document.createElement('div');
+    ov.id = 'modal-gm-snapshots';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.7);z-index:3000;display:flex;align-items:center;justify-content:center;';
+    ov.innerHTML = `<div style="background:white;border-radius:10px;padding:24px;min-width:420px;max-width:90vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="margin:0;font-size:16px;">💾 Snapshots locales</h3>
+            <button onclick="document.getElementById('modal-gm-snapshots').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#64748b;">✕</button>
+        </div>
+        <p style="font-size:12px;color:#64748b;margin:0 0 12px;">Backups guardados automáticamente en este dispositivo (máx. 10).</p>
+        <table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="border-bottom:2px solid #e2e8f0;">
+                <th style="padding:6px;text-align:left;font-size:12px;color:#64748b;">Fecha</th>
+                <th style="padding:6px;text-align:left;font-size:12px;color:#64748b;">Tipo</th>
+                <th style="padding:6px;text-align:right;font-size:12px;color:#64748b;">Acción</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+        <div style="margin-top:16px;display:flex;justify-content:space-between;">
+            <button onclick="gmHacerSnapshot(true);gmMostrarSnapshots();" style="background:#4f46e5;color:white;border:none;border-radius:4px;padding:6px 14px;font-size:13px;cursor:pointer;">📸 Guardar ahora</button>
+            <button onclick="document.getElementById('modal-gm-snapshots').remove()" style="background:#f1f5f9;color:#334155;border:none;border-radius:4px;padding:6px 14px;font-size:13px;cursor:pointer;">Cerrar</button>
+        </div>
+    </div>`;
+    document.body.appendChild(ov);
+}
+function gmSalir() {
+    const bkups = gmCargarSnapshots();
+    const ultimo = bkups[0];
+    const hace5min = ultimo && (Date.now() - ultimo.ts) < 5 * 60 * 1000;
+    if(hace5min) {
+        alert('✅ Backup al día. Ya podés cerrar la pestaña.');
+        window.close();
+    } else {
+        gmHacerSnapshot(true);
+        alert('✅ Snapshot guardado. Ya podés cerrar la pestaña.');
+        window.close();
+    }
+}
 const SKEY        = 'finanzas-pro-v13';
 const LEGACY_KEYS = [
     'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
@@ -1687,7 +1777,18 @@ window.addEventListener('DOMContentLoaded', function() {
 
     // Restaurar carpeta DESPUÉS de cerrar splash para no interferir
     setTimeout(() => restaurarCarpetaGuardada(), 700);
+
+    // Versión dinámica en header
+    const hdrV = document.getElementById('hdr-version');
+    if(hdrV) hdrV.textContent = APP_VERSION;
+
+    // Cierre seguro: snapshot local al cerrar con X
+    window.addEventListener('beforeunload', () => { gmHacerSnapshot(false); });
+    document.addEventListener('visibilitychange', () => {
+        if(document.visibilityState === 'hidden') gmHacerSnapshot(false);
+    });
 });
 </script>
 </body>
 </html>
+
