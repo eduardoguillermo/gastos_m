@@ -1,5 +1,5 @@
-// FinanzasPro Ledger · Service Worker v13.19
-const CACHE_NAME = 'finanzas-pro-v13.19';
+// FinanzasPro Ledger · Service Worker v13.20
+const CACHE_NAME = 'finanzas-pro-v13.20';
 const ASSETS = ['./index.html', './manifest.json'];
 self.addEventListener('install', (e) => {
   self.skipWaiting();
