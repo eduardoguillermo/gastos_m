@@ -3,339 +3,575 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinanzasPro - Matrix Budget Edition</title>
-    
-    <link class="apple-touch-icon" href="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=192&h=192&fit=crop&auto=format">
+    <title>FinanzasPro Ledger</title>
+
+    <link rel="apple-touch-icon" href="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=192&h=192&fit=crop&auto=format">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2563eb">
+    <meta name="theme-color" content="#1e40af">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <style>
         :root {
-            --bg-main: #f1f5f9;
-            --bg-card: #ffffff;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --primary: #2563eb;
-            --ingreso: #10b981;
-            --ingreso-bg: #e6f4ea;
-            --gasto: #ef4444;
-            --gasto-bg: #fce8e6;
-            --transferencia: #eab308;
-            --transferencia-bg: #fef9c3;
-            --border: #cbd5e1;
-            --radius: 6px;
+            --bg-main:          #f1f5f9;
+            --bg-card:          #ffffff;
+            --bg-subtle:        #f8fafc;
+            --text-main:        #0f172a;
+            --text-muted:       #64748b;
+            --text-label:       #475569;
+            --primary:          #1e40af;
+            --primary-hover:    #1d3a9e;
+            --primary-light:    #dbeafe;
+            --ingreso:          #059669;
+            --ingreso-bg:       #d1fae5;
+            --gasto:            #dc2626;
+            --gasto-bg:         #fee2e2;
+            --transferencia:    #d97706;
+            --transferencia-bg: #fef3c7;
+            --border:           #e2e8f0;
+            --border-focus:     #93c5fd;
+            --radius:           8px;
+            --radius-sm:        5px;
+            --shadow-sm:        0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05);
+            --shadow-md:        0 4px 12px rgba(0,0,0,.08);
+            --transition:       160ms ease;
         }
-        
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
+
         html, body { height: 100vh; width: 100vw; overflow: hidden; }
-        
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: var(--bg-main); color: var(--text-main); padding: 8px; font-size: 13px;
-            display: flex; flex-direction: column;
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+            padding: 8px;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
         }
-        
-        .container { width: 100%; height: 100%; max-width: 100%; margin: 0; display: flex; flex-direction: column; gap: 8px; }
-        
-        header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            background: var(--bg-card); padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--border);
-            flex-shrink: 0; flex-wrap: wrap; gap: 12px;
+
+        /* ── SPLASH ── */
+        #splash {
+            position: fixed; inset: 0; background: var(--primary);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; gap: 12px; transition: opacity .4s ease;
         }
-        header h1 { font-size: 13px; font-weight: 700; }
-        header h1 span { color: var(--primary); }
-        
-        .balance-strip { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-        
+        #splash.fade-out { opacity: 0; pointer-events: none; }
+        .splash-logo { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -1px; }
+        .splash-logo span { color: #93c5fd; }
+        .splash-version { font-size: 11px; color: #93c5fd; font-weight: 600; letter-spacing: .5px; }
+        .splash-spinner {
+            width: 24px; height: 24px; border: 3px solid rgba(255,255,255,.25);
+            border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; margin-top: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── TOAST / MODAL ── */
+        #toast-container {
+            position: fixed; top: 12px; right: 12px; z-index: 8888;
+            display: flex; flex-direction: column; gap: 6px; pointer-events: none;
+        }
+        .toast {
+            padding: 8px 14px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600;
+            box-shadow: var(--shadow-md); pointer-events: all; display: flex; align-items: center; gap: 6px;
+            animation: slideIn .2s ease; max-width: 280px;
+        }
+        .toast.success  { background: var(--ingreso-bg);   color: var(--ingreso);       border-left: 3px solid var(--ingreso); }
+        .toast.error    { background: var(--gasto-bg);     color: var(--gasto);         border-left: 3px solid var(--gasto); }
+        .toast.info     { background: var(--primary-light);color: var(--primary);        border-left: 3px solid var(--primary); }
+        .toast.warning  { background: var(--transferencia-bg); color: var(--transferencia); border-left: 3px solid var(--transferencia); }
+        @keyframes slideIn { from { opacity:0; transform: translateX(16px); } to { opacity:1; transform: none; } }
+
+        #modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 7777;
+            display: none; align-items: center; justify-content: center;
+        }
+        #modal-overlay.active { display: flex; }
+        .modal-box {
+            background: var(--bg-card); border-radius: var(--radius); padding: 20px 24px;
+            max-width: 340px; width: 90%; box-shadow: var(--shadow-md);
+        }
+        .modal-box h4 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+        .modal-box p  { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+        .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+        /* ── LAYOUT ── */
+        .app-container { width: 100%; height: 100%; display: flex; flex-direction: column; gap: 8px; }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-card); padding: 8px 14px;
+            border-radius: var(--radius); border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm); flex-shrink: 0; flex-wrap: wrap; gap: 10px;
+        }
+        .hdr-brand { display: flex; align-items: baseline; gap: 8px; }
+        .hdr-brand h1 { font-size: 14px; font-weight: 800; letter-spacing: -.3px; }
+        .hdr-brand h1 span { color: var(--primary); }
+        .hdr-version {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .8px; color: var(--text-muted);
+            background: var(--bg-subtle); border: 1px solid var(--border);
+            padding: 1px 5px; border-radius: 3px;
+        }
+
+        .balance-strip { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
         .strip-group {
-            display: flex; align-items: center; gap: 10px; padding: 4px 10px; background: #f8fafc; border: 1px solid var(--border); border-radius: 4px;
+            display: flex; align-items: center; gap: 8px; padding: 5px 10px;
+            background: var(--bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-sm);
         }
-        .strip-group-title { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); border-right: 1px solid var(--border); padding-right: 8px; }
-        
-        .balance-item { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; color: var(--text-muted); }
-        .balance-item b { font-size: 13px; font-weight: 700; color: var(--text-main); }
-        
-        .workspace-grid { 
-            display: grid; grid-template-columns: 320px 1fr 340px; gap: 8px; flex-grow: 1; min-height: 0;
+        .strip-group-title {
+            font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px;
+            color: var(--text-muted); border-right: 1px solid var(--border); padding-right: 8px;
         }
-        @media (max-width: 1200px) { 
-            .workspace-grid { grid-template-columns: 1fr; overflow-y: auto; } 
+        .sep-v { width: 1px; height: 10px; background: var(--border); }
+        .balance-item { display: flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 500; color: var(--text-muted); }
+        .balance-item b { font-size: 12px; font-weight: 700; color: var(--text-main); }
+
+        .workspace-grid {
+            display: grid; grid-template-columns: 310px 1fr 340px;
+            gap: 8px; flex-grow: 1; min-height: 0;
+        }
+        @media (max-width: 1200px) {
+            .workspace-grid { grid-template-columns: 1fr; overflow-y: auto; }
             .panel { height: auto !important; max-height: none !important; }
+            html, body { height: auto; overflow: auto; }
         }
-        
-        .panel { 
-            background: var(--bg-card); padding: 12px; border-radius: var(--radius); 
-            border: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; min-height: 0;
+
+        .panel {
+            background: var(--bg-card); padding: 12px; border-radius: var(--radius);
+            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+            display: flex; flex-direction: column; height: 100%; min-height: 0;
         }
-        .panel h3 { font-size: 12px; font-weight: 700; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border); color: #334155; flex-shrink: 0; }
-        
-        .tabs-header { display: flex; gap: 2px; background: #e2e8f0; padding: 3px; border-radius: 6px; margin-bottom: 10px; flex-shrink: 0; }
-        .tab-btn { flex: 1; background: transparent; border: none; padding: 6px; font-size: 11px; font-weight: 700; color: var(--text-muted); cursor: pointer; border-radius: 4px; text-align: center; }
-        .tab-btn.active { background: white; color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        
+        .panel-title {
+            font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+            color: var(--text-muted); margin-bottom: 10px; padding-bottom: 6px;
+            border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+
+        /* ── TABS ── */
+        .tabs-header {
+            display: flex; gap: 2px; background: var(--bg-subtle);
+            padding: 3px; border-radius: 7px; margin-bottom: 10px; flex-shrink: 0;
+            border: 1px solid var(--border);
+        }
+        .tab-btn {
+            flex: 1; background: transparent; border: none; padding: 6px 4px;
+            font-size: 11px; font-weight: 700; color: var(--text-muted);
+            cursor: pointer; border-radius: 5px; text-align: center; transition: var(--transition);
+        }
+        .tab-btn.active { background: var(--bg-card); color: var(--primary); box-shadow: var(--shadow-sm); }
+        .tab-btn:not(.active):hover { background: var(--border); color: var(--text-main); }
+
         .tab-content { display: none; flex-direction: column; flex-grow: 1; min-height: 0; }
         .tab-content.active { display: flex; }
 
-        .form-container { flex-shrink: 0; }
-        .form-group { margin-bottom: 6px; }
-        label { display: block; margin-bottom: 2px; font-weight: 600; font-size: 11px; color: #475569; }
-        input, select { 
-            width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; color: var(--text-main); background-color: #fff;
+        /* ── FORMS ── */
+        .form-section { flex-shrink: 0; }
+        .form-group { margin-bottom: 7px; }
+        label {
+            display: block; margin-bottom: 3px;
+            font-weight: 700; font-size: 10px; text-transform: uppercase;
+            letter-spacing: .4px; color: var(--text-label);
         }
-        input:focus, select:focus { outline: none; border-color: var(--primary); }
-        
-        button { 
-            display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;
+        input, select, textarea {
+            width: 100%; padding: 6px 9px; border: 1px solid var(--border);
+            border-radius: var(--radius-sm); font-size: 12px; font-family: inherit;
+            color: var(--text-main); background: var(--bg-card);
+            transition: border-color var(--transition), box-shadow var(--transition);
+            -webkit-appearance: none; appearance: none;
         }
-        button.btn-block { width: 100%; padding: 8px; }
-        button.btn-primary { background: var(--primary); color: white; }
-        button.btn-secondary { background: #e2e8f0; color: #334155; }
-        button.btn-secondary:hover { background: #cbd5e1; }
-        
+        input:focus, select:focus {
+            outline: none; border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(147,197,253,.25);
+        }
+        input.field-error { border-color: var(--gasto); }
+
+        /* ── BUTTONS ── */
+        button {
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: 4px; padding: 7px 12px; border: none; border-radius: var(--radius-sm);
+            cursor: pointer; font-weight: 700; font-size: 12px; font-family: inherit;
+            transition: background var(--transition), transform var(--transition), opacity var(--transition);
+        }
+        button:active { transform: scale(.97); }
+
+        .btn-block    { width: 100%; padding: 8px; }
+        .btn-primary  { background: var(--primary); color: #fff; }
+        .btn-primary:hover  { background: var(--primary-hover); }
+        .btn-dark     { background: #0f172a; color: #fff; }
+        .btn-dark:hover     { background: #1e293b; }
+        .btn-secondary{ background: var(--bg-subtle); color: #334155; border: 1px solid var(--border); }
+        .btn-secondary:hover{ background: var(--border); }
+        .btn-danger   { background: var(--gasto-bg); color: var(--gasto); border: 1px solid #fca5a5; }
+        .btn-danger:hover   { background: #fca5a5; }
+        .btn-sm       { padding: 4px 8px; font-size: 11px; }
+        .btn-xs       { padding: 3px 6px; font-size: 10px; border-radius: 4px; }
+        .btn-icon     { background: transparent; color: var(--text-muted); padding: 4px 5px; border-radius: 4px; font-size: 12px; border: none; }
+        .btn-icon:hover { background: var(--bg-subtle); color: var(--text-main); }
+        .btn-icon.danger:hover { background: var(--gasto-bg); color: var(--gasto); }
+
+        button:disabled { opacity: .5; cursor: not-allowed; }
+        button.loading  { opacity: .7; cursor: wait; }
+
+        /* ── LIBRO DIARIO ── */
+        .libro-hdr {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 6px; flex-shrink: 0; gap: 6px;
+        }
         .date-filter-strip {
-            display: flex; gap: 4px; background: #f8fafc; padding: 6px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 4px; flex-shrink: 0;
+            display: flex; gap: 4px; background: var(--bg-subtle); padding: 6px;
+            border-radius: var(--radius-sm); border: 1px solid var(--border);
+            margin-bottom: 6px; flex-shrink: 0; align-items: flex-end;
         }
         .date-filter-group { flex: 1; }
-        .date-filter-group input { padding: 3px 6px; font-size: 11px; }
+        .date-filter-group label { margin-bottom: 2px; }
+        .date-filter-group input { padding: 4px 7px; font-size: 11px; }
 
         .live-counter-strip {
-            display: flex; justify-content: center; align-items: center; background: #f1f5f9; padding: 6px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 8px; font-size: 12px; font-weight: 700; flex-shrink: 0;
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-subtle); padding: 5px 10px;
+            border: 1px solid var(--border); border-radius: var(--radius-sm);
+            margin-bottom: 6px; font-size: 11px; font-weight: 700; flex-shrink: 0;
         }
+        .live-counter-strip small { font-size: 10px; font-weight: 600; color: var(--text-muted); }
 
         .scroll-list { overflow-y: auto; flex-grow: 1; padding-right: 2px; min-height: 0; }
         .scroll-list::-webkit-scrollbar { width: 4px; }
-        .scroll-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
-        
-        .compact-row { 
-            display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 4px; font-size: 12px;
+        .scroll-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        /* ── MOVEMENT ROW ── */
+        .mov-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 7px 9px; background: var(--bg-subtle); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); margin-bottom: 4px; transition: background var(--transition);
         }
-        .compact-row:hover { background: #f1f5f9; }
-        
-        .month-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px; }
-        .month-header { font-weight: 700; color: #1e293b; border-bottom: 1px dashed var(--border); padding-bottom: 3px; margin-bottom: 5px; text-transform: capitalize; }
-        .month-data { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; }
-        
-        .budget-row-report { margin-top: 5px; padding: 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; }
-        .budget-bar-bg { width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; margin-top: 3px; overflow: hidden; }
-        .budget-bar-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.3s ease; }
-        
-        .badge { display: inline-block; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
-        .badge.gasto { background: var(--gasto-bg); color: var(--gasto); }
-        .badge.ingreso { background: var(--ingreso-bg); color: var(--ingreso); }
-        .badge.transf { background: var(--transferencia-bg); color: var(--transferencia); }
-        .badge.wallet { background: #e2e8f0; color: #334155; border: 1px solid var(--border); margin-left: 2px; max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
-        
-        .actions-wrapper { display: flex; gap: 2px; }
-        .btn-trigger { background: transparent; color: var(--text-muted); padding: 4px; border: none; cursor: pointer; border-radius: 3px; font-size: 11px; }
-        .btn-trigger:hover { background: #e2e8f0; color: var(--text-main); }
-        .btn-trigger.danger:hover { background: var(--gasto-bg); color: var(--gasto); }
-        
-        .filter-select { width: auto; min-width: 110px; padding: 3px 6px; font-size: 11px; height: 24px; }
-        .btn-print { background: #0f172a; color: white; padding: 4px 8px; font-size: 11px; height: 24px; }
-        
-        footer { 
-            background: var(--bg-card); border: 1px solid var(--border); padding: 6px 14px; border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center; font-size: 11px; flex-shrink: 0; gap: 8px;
+        .mov-row:hover { background: #f0f4ff; border-color: var(--border-focus); }
+        .mov-row-left { min-width: 0; }
+        .mov-row-concept { font-weight: 700; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+        .mov-row-meta { display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap; }
+        .mov-row-date { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+        .mov-row-right { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+        .mov-amount { font-weight: 800; font-size: 12px; }
+
+        /* ── RUBROS ROW ── */
+        .rub-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 9px; background: var(--bg-subtle); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); margin-bottom: 4px;
         }
 
-        .toast-banner {
-            padding: 4px 8px; background: #fef2f2; border: 1px solid #fee2e2; color: #b91c1c; border-radius: 4px; font-weight: 600; display: none; animation: pulse 2s infinite;
+        /* ── BADGES ── */
+        .badge {
+            display: inline-flex; align-items: center;
+            padding: 1px 5px; border-radius: 3px;
+            font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px;
         }
-        .pwa-update-banner {
-            padding: 4px 8px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; border-radius: 4px; font-weight: 600; display: none; cursor: pointer;
+        .badge.gasto        { background: var(--gasto-bg);        color: var(--gasto); }
+        .badge.ingreso      { background: var(--ingreso-bg);       color: var(--ingreso); }
+        .badge.transf       { background: var(--transferencia-bg); color: var(--transferencia); }
+        .badge.wallet       {
+            background: var(--bg-card); color: var(--text-muted);
+            border: 1px solid var(--border); max-width: 72px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
+
+        /* ── PRESUPUESTO BARRA ── */
+        .month-card {
+            background: var(--bg-subtle); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); padding: 10px; margin-bottom: 6px;
+        }
+        .month-header {
+            font-weight: 800; font-size: 12px; color: #1e293b; text-transform: capitalize;
+            border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 7px;
+            display: flex; justify-content: space-between;
+        }
+        .month-data {
+            display: flex; justify-content: space-between; font-size: 11px;
+            margin-bottom: 3px; font-weight: 500;
+        }
+        .budget-row-report {
+            margin-top: 5px; padding: 5px 6px; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: 4px;
+        }
+        .budget-bar-bg { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+        .budget-bar-fill { height: 100%; border-radius: 2px; transition: width .4s ease; }
+
+        /* ── TRANSFERENCIA FORM ── */
+        .transf-block {
+            background: #fffbeb; padding: 8px; border-radius: var(--radius-sm);
+            border: 1px solid #fde68a; display: none;
+        }
+        .transf-block.visible { display: block; }
+
+        /* ── FOOTER ── */
+        footer {
+            background: var(--bg-card); border: 1px solid var(--border);
+            padding: 6px 14px; border-radius: var(--radius); box-shadow: var(--shadow-sm);
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 11px; flex-shrink: 0; gap: 8px;
+        }
+        .footer-left  { display: flex; align-items: center; gap: 8px; }
+        .footer-right { display: flex; gap: 6px; }
+
+        .storage-warn {
+            padding: 3px 7px; background: var(--gasto-bg); border: 1px solid #fca5a5;
+            color: var(--gasto); border-radius: 4px; font-weight: 700; display: none;
+        }
+        .pwa-update-pill {
+            padding: 3px 7px; background: var(--primary-light); border: 1px solid #93c5fd;
+            color: var(--primary); border-radius: 4px; font-weight: 700; cursor: pointer; display: none;
+        }
+
+        /* ── MISC ── */
+        .divider { border: none; border-top: 1px dashed var(--border); margin: 6px 0; }
+        .empty-state { text-align: center; padding: 20px 10px; color: var(--text-muted); font-size: 11px; }
+        .empty-state .empty-icon { font-size: 24px; margin-bottom: 4px; }
+        .filter-select { padding: 4px 7px; font-size: 11px; width: auto; }
 
         #contenedor-impresion-pwa { display: none; }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+        @keyframes btnFeedback {
+            0%   { background: var(--ingreso); }
+            100% { background: var(--primary); }
         }
 
         @media print {
-            body, html { height: auto; overflow: visible; background: #ffffff; color: #000000; padding: 0; margin: 0; }
-            .container { display: none !important; }
+            body, html { height: auto; overflow: visible; background: #fff; padding: 0; }
+            .app-container { display: none !important; }
+            #splash { display: none !important; }
             #contenedor-impresion-pwa { display: block !important; padding: 20px; }
         }
     </style>
 </head>
 <body>
 
-<div class="container">
+<!-- SPLASH -->
+<div id="splash">
+    <div class="splash-logo">Finanzas<span>Pro</span></div>
+    <div class="splash-version">v13.00 · Ledger Edition</div>
+    <div class="splash-spinner"></div>
+</div>
+
+<!-- TOASTS -->
+<div id="toast-container"></div>
+
+<!-- MODAL CONFIRMACIÓN -->
+<div id="modal-overlay">
+    <div class="modal-box">
+        <h4 id="modal-title">¿Confirmar acción?</h4>
+        <p id="modal-body"></p>
+        <div class="modal-actions">
+            <button class="btn-secondary btn-sm" id="modal-cancel">Cancelar</button>
+            <button class="btn-danger btn-sm" id="modal-confirm">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<div class="app-container">
+
+    <!-- HEADER -->
     <header>
-        <h1>Finanzas<span>Pro</span> <small style="color:var(--text-muted); font-size:10px;">v12.02 Enterprise-Ledger</small></h1>
-        
+        <div class="hdr-brand">
+            <h1>Finanzas<span>Pro</span></h1>
+            <span class="hdr-version" id="hdr-version">v13.00</span>
+        </div>
+
         <div class="balance-strip">
-            <!-- GRUPO 1: MÉTRICAS DE CONTROL PRESUPUESTARIO -->
             <div class="strip-group">
                 <span class="strip-group-title">🎯 Presupuesto</span>
-                <div class="balance-item">Límites: <b id="view-budget-general" style="color: var(--primary);">$0,00</b></div>
-                <div style="width:1px; height:10px; background:var(--border);"></div>
-                <div class="balance-item">Restan: <b id="view-budget-restante" style="color: var(--ingreso);">$0,00</b></div>
+                <div class="balance-item">Límites: <b id="view-budget-general" style="color:var(--primary)">$0,00</b></div>
+                <div class="sep-v"></div>
+                <div class="balance-item">Restan: <b id="view-budget-restante">$0,00</b></div>
             </div>
-
-            <!-- GRUPO 2: TENENCIAS REALES Y ACTIVOS LÍQUIDOS -->
             <div class="strip-group">
                 <span class="strip-group-title">💰 Tenencias</span>
                 <div class="balance-item">Neto: <b id="view-balance">$0,00</b></div>
-                <div style="width:1px; height:10px; background:var(--border);"></div>
+                <div class="sep-v"></div>
                 <div class="balance-item">💵 Efec: <b id="view-bal-efectivo">$0,00</b></div>
-                <div style="width:1px; height:10px; background:var(--border);"></div>
-                <div class="balance-item">💳 <span id="label-hdr-debito1">Banco 1</span>: <b id="view-bal-debito1">$0,00</b></div>
-                <div style="width:1px; height:10px; background:var(--border);"></div>
-                <div class="balance-item">💳 <span id="label-hdr-debito2">Banco 2</span>: <b id="view-bal-debito2">$0,00</b></div>
+                <div class="sep-v"></div>
+                <div class="balance-item" id="grp-debito1">💳 <span id="label-hdr-debito1">Banco 1</span>: <b id="view-bal-debito1">$0,00</b></div>
+                <div class="sep-v" id="sep-d1"></div>
+                <div class="balance-item" id="grp-debito2">💳 <span id="label-hdr-debito2">Banco 2</span>: <b id="view-bal-debito2">$0,00</b></div>
+                <div class="sep-v" id="sep-d2"></div>
+                <div class="balance-item" id="grp-debito3" style="display:none">💳 <span id="label-hdr-debito3">Banco 3</span>: <b id="view-bal-debito3">$0,00</b></div>
             </div>
         </div>
     </header>
-    
+
+    <!-- WORKSPACE -->
     <div class="workspace-grid">
+
+        <!-- PANEL IZQUIERDO: CARGA / RUBROS / CUENTAS -->
         <div class="panel">
             <div class="tabs-header">
-                <button class="tab-btn active" onclick="switchTab('tab-carga')">✍️ Carga</button>
-                <button class="tab-btn" onclick="switchTab('tab-rubros')">📁 Rubros</button>
-                <button class="tab-btn" onclick="switchTab('tab-bancos')">🏦 Bancos</button>
+                <button class="tab-btn active" data-tab="tab-carga">✍️ Carga</button>
+                <button class="tab-btn" data-tab="tab-rubros">📁 Rubros</button>
+                <button class="tab-btn" data-tab="tab-bancos">🏦 Cuentas</button>
             </div>
 
+            <!-- TAB CARGA -->
             <div id="tab-carga" class="tab-content active">
-                <div class="form-container">
+                <div class="form-section">
                     <div class="form-group">
-                        <label for="mov-tipo-flujo">Tipo de Operación</label>
-                        <select id="mov-tipo-flujo" onchange="alternarVisibilidadFormularioCarga()">
-                            <option value="presupuestado">Asiento Tradicional (Gasto / Ingreso)</option>
-                            <option value="transferencia">🔄 Transferencia entre Cuentas</option>
+                        <label for="mov-tipo-flujo">Tipo de operación</label>
+                        <select id="mov-tipo-flujo">
+                            <option value="presupuestado">Gasto / Ingreso</option>
+                            <option value="transferencia">🔄 Transferencia entre cuentas</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="mov-concepto">Concepto / Detalle</label>
-                        <input type="text" id="mov-concepto" autocomplete="off" placeholder="Ej: Compra repuestos...">
+                        <label for="mov-concepto">Concepto</label>
+                        <input type="text" id="mov-concepto" autocomplete="off" placeholder="Ej: Supermercado Día…">
                     </div>
-                    <div class="form-group">
-                        <label for="mov-monto">Monto ($)</label>
-                        <input type="number" id="mov-monto" step="0.01" min="0.01" placeholder="0,00">
+                    <div style="display:flex; gap:6px;">
+                        <div class="form-group" style="flex:1">
+                            <label for="mov-monto">Monto ($)</label>
+                            <input type="number" id="mov-monto" step="0.01" min="0.01" placeholder="0,00">
+                        </div>
+                        <div class="form-group" style="flex:1">
+                            <label for="mov-fecha">Fecha</label>
+                            <input type="date" id="mov-fecha">
+                        </div>
                     </div>
 
+                    <!-- FLUJO ESTÁNDAR -->
                     <div id="wrapper-carga-estandar">
                         <div class="form-group">
-                            <label for="mov-rubro">Asignar Rubro Clasificador</label>
+                            <label for="mov-rubro">Rubro / categoría</label>
                             <select id="mov-rubro"></select>
                         </div>
                         <div class="form-group">
-                            <label for="mov-origen">Billetera / Cuenta Impactada</label>
+                            <label for="mov-origen">Cuenta impactada</label>
                             <select id="mov-origen"></select>
                         </div>
                     </div>
 
-                    <div id="wrapper-carga-transferencia" style="display: none; background: #fffbeb; padding: 6px; border-radius: 4px; border: 1px solid #fef08a;">
+                    <!-- TRANSFERENCIA -->
+                    <div id="wrapper-carga-transferencia" class="transf-block">
                         <div class="form-group">
-                            <label for="mov-transf-origen" style="color: var(--gasto); font-weight:700;">Origen (Cuenta que Resta)</label>
+                            <label for="mov-transf-origen" style="color:var(--gasto)">Origen (resta)</label>
                             <select id="mov-transf-origen"></select>
                         </div>
                         <div class="form-group">
-                            <label for="mov-transf-destino" style="color: var(--ingreso); font-weight:700;">Destino (Cuenta que Suma)</label>
+                            <label for="mov-transf-destino" style="color:var(--ingreso)">Destino (suma)</label>
                             <select id="mov-transf-destino"></select>
                         </div>
                     </div>
 
-                    <button id="btn-guardar-movimiento" class="btn-primary btn-block" style="background:#0f172a; margin-top:8px;">Asentar Registro</button>
+                    <button id="btn-guardar-movimiento" class="btn-primary btn-block" style="margin-top:8px;">
+                        ✓ Asentar registro
+                    </button>
                 </div>
             </div>
 
+            <!-- TAB RUBROS -->
             <div id="tab-rubros" class="tab-content">
-                <div class="form-container" style="margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 6px; background: #f8fafc; padding: 6px; border-radius: var(--radius);">
-                    <div class="form-group">
-                        <label for="rubro-mes-visor" style="color:var(--primary); font-weight: 700;">Itemizado de Límites por Mes:</label>
-                        <select id="rubro-mes-visor" onchange="render()"></select>
+                <div class="form-section" style="margin-bottom:8px; background:var(--bg-subtle); padding:8px; border-radius:var(--radius-sm); border:1px solid var(--border);">
+                    <div class="form-group" style="margin-bottom:0">
+                        <label for="rubro-mes-visor">Límites del mes</label>
+                        <select id="rubro-mes-visor"></select>
                     </div>
                 </div>
-
-                <div class="form-container" style="margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 6px;">
+                <div class="form-section" style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px dashed var(--border);">
                     <div class="form-group">
-                        <label for="rubro-nombre">Nombre Rubro / Categoría</label>
-                        <input type="text" id="rubro-nombre" autocomplete="off" placeholder="Ej: Combustible...">
+                        <label for="rubro-nombre">Nombre del rubro</label>
+                        <input type="text" id="rubro-nombre" autocomplete="off" placeholder="Ej: Combustible…">
                     </div>
-                    <div class="form-group">
-                        <label for="rubro-tipo">Tipo de Flujo</label>
-                        <select id="rubro-tipo" onchange="alternarInputPresupuestoRubro()">
-                            <option value="gasto">Gasto</option>
-                            <option value="ingreso">Ingreso</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="group-rubro-presupuesto">
-                        <label for="rubro-limite">Límite para el Mes Seleccionado ($)</label>
-                        <input type="number" id="rubro-limite" step="1" min="0" placeholder="0 (Sin límite)">
+                    <div style="display:flex; gap:6px;">
+                        <div class="form-group" style="flex:1">
+                            <label for="rubro-tipo">Tipo</label>
+                            <select id="rubro-tipo">
+                                <option value="gasto">Gasto</option>
+                                <option value="ingreso">Ingreso</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="group-rubro-presupuesto" style="flex:1">
+                            <label for="rubro-limite">Límite ($)</label>
+                            <input type="number" id="rubro-limite" step="1" min="0" placeholder="Sin límite">
+                        </div>
                     </div>
                     <input type="hidden" id="rubro-edit-id" value="">
-                    <button id="btn-guardar-rubro" class="btn-primary btn-block" style="font-size:11px; padding: 5px;">Guardar Categoría</button>
-                    <button id="btn-cancelar-rubro" class="btn-secondary btn-block" style="display:none; font-size:10px; padding:2px;">Cancelar</button>
+                    <div style="display:flex; gap:4px;">
+                        <button id="btn-guardar-rubro" class="btn-primary btn-block">Guardar categoría</button>
+                        <button id="btn-cancelar-rubro" class="btn-secondary" style="display:none; padding:6px 10px; white-space:nowrap;">✕</button>
+                    </div>
                 </div>
-
                 <div class="scroll-list" id="lista-rubros"></div>
             </div>
 
+            <!-- TAB CUENTAS/BANCOS -->
             <div id="tab-bancos" class="tab-content">
-                <div class="form-container">
-                    <div class="form-group">
-                        <label for="cfg-debito1">Nombre Banco 1</label>
-                        <input type="text" id="cfg-debito1" placeholder="Ej: Galicia">
-                    </div>
-                    <div class="form-group">
-                        <label for="cfg-debito2">Nombre Banco 2</label>
-                        <input type="text" id="cfg-debito2" placeholder="Ej: Mercado Pago">
-                    </div>
-                    <button id="btn-guardar-bancos" class="btn-secondary btn-block" style="font-size:11px;">Actualizar Nombres</button>
+                <p style="font-size:11px; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">
+                    Configurá los nombres de tus cuentas bancarias. Siempre existe la cuenta <strong>Efectivo</strong>.
+                </p>
+                <div class="form-group">
+                    <label for="cfg-debito1">Cuenta 1 (débito)</label>
+                    <input type="text" id="cfg-debito1" placeholder="Ej: Galicia">
                 </div>
+                <div class="form-group">
+                    <label for="cfg-debito2">Cuenta 2 (débito)</label>
+                    <input type="text" id="cfg-debito2" placeholder="Ej: Mercado Pago">
+                </div>
+                <div class="form-group">
+                    <label for="cfg-debito3">Cuenta 3 (opcional)</label>
+                    <input type="text" id="cfg-debito3" placeholder="Ej: Brubank">
+                </div>
+                <button id="btn-guardar-bancos" class="btn-secondary btn-block" style="margin-top:2px;">Actualizar nombres</button>
             </div>
         </div>
 
+        <!-- PANEL CENTRAL: LIBRO DIARIO -->
         <div class="panel">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 4px;">
-                <h3 style="margin-bottom:0; border-bottom:none;">📊 Libro Diario</h3>
-                <div style="display: flex; gap: 4px;">
+            <div class="libro-hdr">
+                <span class="panel-title" style="margin-bottom:0; padding-bottom:0; border-bottom:none;">📊 Libro diario</span>
+                <div style="display:flex; gap:4px; align-items:center;">
                     <select id="filtro-avanzado" class="filter-select"></select>
-                    <button class="btn-print" onclick="ejecutarImpresionPWA()">🖨️ Imprimir</button>
+                    <button class="btn-dark btn-sm" onclick="ejecutarImpresionPWA()">🖨️</button>
                 </div>
             </div>
-            
+            <hr class="divider">
+
             <div class="date-filter-strip">
                 <div class="date-filter-group">
-                    <label style="font-size: 9px; font-weight: 700;">DESDE</label>
+                    <label>Desde</label>
                     <input type="date" id="filtro-fecha-desde">
                 </div>
                 <div class="date-filter-group">
-                    <label style="font-size: 9px; font-weight: 700;">HASTA</label>
+                    <label>Hasta</label>
                     <input type="date" id="filtro-fecha-hasta">
                 </div>
-                <div style="display: flex; align-items: flex-end;">
-                    <button class="btn-secondary" onclick="limpiarFiltrosFecha()" style="padding: 4px 6px; height: 21px; font-size: 10px;">X</button>
+                <div>
+                    <button class="btn-secondary btn-sm" onclick="limpiarFiltrosFecha()" title="Limpiar fechas">✕</button>
                 </div>
             </div>
 
-            <!-- TOTALIZADOR MATEMÁTICO ÚNICO SÓLIDO -->
-            <div class="live-counter-strip" id="live-filter-counter">
-                <span>Suma asientos filtrados: <b id="live-total-unico" style="font-size:13px;">$0,00</b></span>
+            <div class="live-counter-strip">
+                <small id="live-count-label">0 asientos</small>
+                <span>Total: <b id="live-total-unico" style="font-size:13px;">$0,00</b></span>
             </div>
 
             <div class="scroll-list" id="lista-movimientos"></div>
         </div>
 
+        <!-- PANEL DERECHO: REPORTE MENSUAL -->
         <div class="panel">
-            <h3>📈 Presupuestos vs Gastos por Mes</h3>
+            <span class="panel-title">📈 Presupuesto vs gastos</span>
             <div class="scroll-list" id="lista-reporte-mensual"></div>
         </div>
     </div>
 
+    <!-- FOOTER -->
     <footer>
-        <div style="display:flex; align-items:center; gap:8px;">
-            <span style="color: var(--text-muted);" id="db-status">Almacenamiento Local Activo</span>
-            <span id="storage-warning" class="toast-banner">⚠️ MEMORIA COLISIONADA / LLENA</span>
-            <span id="pwa-update-toast" class="pwa-update-banner" onclick="forzarRecargaPWA()">🔄 Nueva versión lista. Actualizar</span>
+        <div class="footer-left">
+            <span style="color:var(--text-muted)" id="db-status">Almacenamiento local activo</span>
+            <span id="storage-warning" class="storage-warn">⚠️ Almacenamiento lleno</span>
+            <span id="pwa-update-toast" class="pwa-update-pill" onclick="forzarRecargaPWA()">🔄 Actualización disponible</span>
         </div>
-        <div class="actions-wrapper">
-            <button class="btn-secondary" onclick="exportarBackup()" style="padding: 4px 8px; font-size:11px;">📥 Exportar</button>
-            <button class="btn-secondary" onclick="document.getElementById('file-import').click()" style="padding: 4px 8px; font-size:11px;">📤 Importar</button>
-            <input type="file" id="file-import" accept=".json" onchange="importarBackup(event)">
+        <div class="footer-right">
+            <button class="btn-secondary btn-sm" onclick="exportarBackup()">📥 Exportar</button>
+            <button class="btn-secondary btn-sm" onclick="document.getElementById('file-import').click()">📤 Importar</button>
+            <input type="file" id="file-import" accept=".json" style="display:none" onchange="importarBackup(event)">
         </div>
     </footer>
 </div>
@@ -343,578 +579,849 @@
 <div id="contenedor-impresion-pwa"></div>
 
 <script>
-    const SKEY = 'finanzas-pro-compact-v12.02'; 
-    const ITEMS_PER_PAGE = 40;
+// ════════════════════════════════════════════════════
+//  CONSTANTES Y ESTADO GLOBAL
+// ════════════════════════════════════════════════════
+const APP_VERSION = '13.00';
+const SKEY        = 'finanzas-pro-v13';
+const LEGACY_KEYS = [
+    'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
+    'finanzas-pro-compact-v12','finanzas-pro-compact-v11',
+    'finanzas-pro-compact-v10','finanzas-pro-compact-v9'
+];
+const ITEMS_PER_PAGE  = 40;
+const NOMBRES_MESES   = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
-    let DB = {
-        version: 12.02,
-        nid: 1,
-        rubros: [
-            { id: 1, nombre: 'Sueldo', tipo: 'ingreso' },
-            { id: 2, nombre: 'Supermercado', tipo: 'gasto' },
-            { id: 3, nombre: 'Servicios', tipo: 'gasto' }
-        ],
-        movimientos: [],
-        bancos: { debito1: 'Banco 1', debito2: 'Banco 2' },
-        presupuestosHistoricos: {} 
-    };
+let DB = {
+    version: 13,
+    nid: 4,
+    rubros: [
+        { id: 1, nombre: 'Sueldo',       tipo: 'ingreso' },
+        { id: 2, nombre: 'Supermercado', tipo: 'gasto'   },
+        { id: 3, nombre: 'Servicios',    tipo: 'gasto'   }
+    ],
+    movimientos: [],
+    cuentas: {
+        efectivo: 'Efectivo',
+        debito1:  'Banco 1',
+        debito2:  'Banco 2',
+        debito3:  ''           // opcional; vacío = oculta
+    },
+    presupuestosHistoricos: {}
+};
 
-    let tSaveDebounce = null;
-    let currentLimitMovimientos = ITEMS_PER_PAGE;
+let _saveTimer          = null;
+let currentLimitMov     = ITEMS_PER_PAGE;
+let _modalResolve       = null;
 
-    window.onload = function() {
-        const legacyKeys = ['finanzas-pro-compact-v12.01', 'finanzas-pro-compact-v12', 'finanzas-pro-compact-v11', 'finanzas-pro-compact-v10', 'finanzas-pro-compact-v9'];
-        let rawData = localStorage.getItem(SKEY);
-        
-        if(!rawData) {
-            for (let oldKey of legacyKeys) {
-                rawData = localStorage.getItem(oldKey);
-                if(rawData) {
-                    localStorage.removeItem(oldKey);
-                    break;
-                }
-            }
+// ════════════════════════════════════════════════════
+//  TOAST  (reemplaza alert / confirm básicos)
+// ════════════════════════════════════════════════════
+function toast(msg, type = 'success', duration = 2600) {
+    const icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `<span>${icons[type]||'·'}</span><span>${msg}</span>`;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => el.remove(), duration);
+}
+
+// ════════════════════════════════════════════════════
+//  MODAL CONFIRM  (reemplaza confirm() nativo)
+// ════════════════════════════════════════════════════
+function showConfirm(title, body, confirmLabel = 'Confirmar', danger = true) {
+    return new Promise(resolve => {
+        _modalResolve = resolve;
+        document.getElementById('modal-title').textContent   = title;
+        document.getElementById('modal-body').textContent    = body;
+        const btnOk = document.getElementById('modal-confirm');
+        btnOk.textContent = confirmLabel;
+        btnOk.className   = danger ? 'btn-danger btn-sm' : 'btn-primary btn-sm';
+        document.getElementById('modal-overlay').classList.add('active');
+    });
+}
+document.getElementById('modal-confirm').addEventListener('click', () => {
+    document.getElementById('modal-overlay').classList.remove('active');
+    if (_modalResolve) { _modalResolve(true); _modalResolve = null; }
+});
+document.getElementById('modal-cancel').addEventListener('click', () => {
+    document.getElementById('modal-overlay').classList.remove('active');
+    if (_modalResolve) { _modalResolve(false); _modalResolve = null; }
+});
+
+// ════════════════════════════════════════════════════
+//  PERSISTENCIA
+// ════════════════════════════════════════════════════
+function save() {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(saveImmediate, 300);
+}
+function saveImmediate() {
+    try {
+        localStorage.setItem(SKEY, JSON.stringify(DB));
+        document.getElementById('storage-warning').style.display = 'none';
+    } catch(e) {
+        if (e.name === 'QuotaExceededError' || e.code === 22) {
+            document.getElementById('storage-warning').style.display = 'inline-block';
         }
+    }
+}
 
-        if (rawData) {
-            try { 
-                let parsed = JSON.parse(rawData);
-                DB = ejecutarMigracionesInternas(parsed);
-                saveImmediate();
-            } catch(e) {
-                console.error("Error crítico en el parseo o migración de datos:", e);
-            }
-        } else {
-            DB.nid = 4; 
-            saveImmediate();
+// ════════════════════════════════════════════════════
+//  MIGRACIONES
+// ════════════════════════════════════════════════════
+function migrar(data) {
+    if (!data.version) data.version = 8;
+
+    if (data.version <= 9) {
+        data.presupuestosHistoricos = data.presupuestosHistoricos || {};
+        data.movimientos.forEach(m => {
+            if (!m.origen) m.origen = 'efectivo';
+            if (m.destino === undefined) m.destino = null;
+        });
+        data.version = 10;
+    }
+    if (data.version <= 12.02) {
+        // Migrar bancos legacy → cuentas
+        if (data.bancos && !data.cuentas) {
+            data.cuentas = {
+                efectivo: 'Efectivo',
+                debito1:  data.bancos.debito1 || 'Banco 1',
+                debito2:  data.bancos.debito2 || 'Banco 2',
+                debito3:  ''
+            };
+            delete data.bancos;
         }
-        
-        inicializarOpcionesDeMesesEnVisor();
+        // Normalizar fechas a ISO YYYY-MM-DD
+        data.movimientos.forEach(m => { m.fecha = normalizarFecha(m.fecha); });
+        data.version = 13;
+    }
+    return data;
+}
 
-        document.getElementById('btn-guardar-rubro').addEventListener('click', guardarRubro);
-        document.getElementById('btn-cancelar-rubro').addEventListener('click', cancelarEdicionRubro);
-        document.getElementById('btn-guardar-movimiento').addEventListener('click', guardarMovimiento);
-        document.getElementById('btn-guardar-bancos').addEventListener('click', guardarNombresBancos);
-        
-        document.getElementById('filtro-avanzado').addEventListener('change', () => { resetPaginacion(); render(); });
-        document.getElementById('filtro-fecha-desde').addEventListener('change', () => { resetPaginacion(); render(); });
-        document.getElementById('filtro-fecha-hasta').addEventListener('change', () => { resetPaginacion(); render(); });
+// ════════════════════════════════════════════════════
+//  UTILITARIOS DE FECHA
+// ════════════════════════════════════════════════════
+/** Convierte cualquier string de fecha a YYYY-MM-DD */
+function normalizarFecha(str) {
+    if (!str) return hoyISO();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    // DD/MM/YYYY  o  D/M/YYYY  (formato toLocaleDateString argentina)
+    const p = str.split(/[\/\-]/);
+    if (p.length === 3) {
+        if (p[0].length <= 2) return `${p[2].padStart(4,'0')}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+        return str; // ya YYYY-...
+    }
+    return hoyISO();
+}
+function hoyISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fechaDisplay(iso) {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+}
+function claveMesDeISO(iso) {
+    if (!iso || iso.length < 7) return '9999-12';
+    return iso.slice(0, 7);
+}
+function etiquetaMes(claveYYYYMM) {
+    const [y, m] = claveYYYYMM.split('-');
+    return `${NOMBRES_MESES[parseInt(m)-1]} ${y}`;
+}
+function obtenerClaveMesActual() {
+    return hoyISO().slice(0, 7);
+}
 
-        document.getElementById('cfg-debito1').value = DB.bancos.debito1;
-        document.getElementById('cfg-debito2').value = DB.bancos.debito2;
+// ════════════════════════════════════════════════════
+//  CUENTAS HELPER
+// ════════════════════════════════════════════════════
+function getCuentas() {
+    const lista = [
+        { key: 'efectivo', label: DB.cuentas.efectivo || 'Efectivo', icon: '💵' },
+        { key: 'debito1',  label: DB.cuentas.debito1  || 'Banco 1',  icon: '💳' },
+        { key: 'debito2',  label: DB.cuentas.debito2  || 'Banco 2',  icon: '💳' },
+    ];
+    if (DB.cuentas.debito3) lista.push({ key: 'debito3', label: DB.cuentas.debito3, icon: '💳' });
+    return lista;
+}
+function labelCuenta(key) {
+    const c = getCuentas().find(x => x.key === key);
+    return c ? c.label : key;
+}
 
-        render();
-    };
+// ════════════════════════════════════════════════════
+//  PRESUPUESTOS HISTÓRICOS
+// ════════════════════════════════════════════════════
+function getLimiteHistorico(claveMes, rubroId) {
+    if (DB.presupuestosHistoricos[claveMes]?.[rubroId] !== undefined) {
+        return DB.presupuestosHistoricos[claveMes][rubroId];
+    }
+    // Hereda del mes anterior
+    const [y, m] = claveMes.split('-').map(Number);
+    const ant = new Date(y, m - 2, 1);
+    const claveAnt = `${ant.getFullYear()}-${String(ant.getMonth()+1).padStart(2,'0')}`;
+    if (Object.keys(DB.presupuestosHistoricos).length > 0 && y > 2020) {
+        return getLimiteHistorico(claveAnt, rubroId);
+    }
+    return 0;
+}
 
-    function ejecutarMigracionesInternas(data) {
-        if (!data.version) data.version = 8; 
-        if (data.version === 8) { data.presupuestosHistoricos = data.presupuestosHistoricos || {}; data.version = 9; }
-        if (data.version === 9) {
-            data.version = 10;
-            data.movimientos.forEach(m => {
-                if (!m.origen) m.origen = 'efectivo';
-                if (m.destino === undefined) m.destino = null;
-            });
-        }
-        if (data.version === 10) { data.version = 11; }
-        if (data.version === 11) { data.version = 12; }
-        if (data.version === 12) { data.version = 12.01; }
-        if (data.version === 12.01) { data.version = 12.02; }
-        return data;
+// ════════════════════════════════════════════════════
+//  FORMATO MONEDA
+// ════════════════════════════════════════════════════
+function fmt(v) {
+    return '$' + Number(v).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+// ════════════════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════════════════
+function initTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabId = this.dataset.tab;
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            this.classList.add('active');
+        });
+    });
+}
+
+// ════════════════════════════════════════════════════
+//  VISIBILIDAD FORMULARIO CARGA
+// ════════════════════════════════════════════════════
+function alternarFormCarga() {
+    const es = document.getElementById('mov-tipo-flujo').value === 'transferencia';
+    document.getElementById('wrapper-carga-estandar').style.display    = es ? 'none' : 'block';
+    document.getElementById('wrapper-carga-transferencia').classList.toggle('visible', es);
+}
+function alternarInputPresupuesto() {
+    const tipo = document.getElementById('rubro-tipo').value;
+    document.getElementById('group-rubro-presupuesto').style.display = tipo === 'gasto' ? 'block' : 'none';
+}
+
+// ════════════════════════════════════════════════════
+//  INICIALIZAR SELECTS DE MES
+// ════════════════════════════════════════════════════
+function initMesesVisor() {
+    const sel = document.getElementById('rubro-mes-visor');
+    sel.innerHTML = '';
+    const hoy = new Date();
+    for (let i = -6; i <= 6; i++) {
+        const d = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
+        const clave = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const opt   = document.createElement('option');
+        opt.value       = clave;
+        opt.textContent = `${NOMBRES_MESES[d.getMonth()]} ${d.getFullYear()}`;
+        if (i === 0) opt.selected = true;
+        sel.appendChild(opt);
+    }
+}
+
+// ════════════════════════════════════════════════════
+//  GUARDAR MOVIMIENTO
+// ════════════════════════════════════════════════════
+function guardarMovimiento() {
+    const conceptoEl = document.getElementById('mov-concepto');
+    const montoEl    = document.getElementById('mov-monto');
+    const fechaEl    = document.getElementById('mov-fecha');
+    const flujo      = document.getElementById('mov-tipo-flujo').value;
+    const monto      = parseFloat(montoEl.value);
+
+    // Validación
+    let ok = true;
+    [conceptoEl, montoEl].forEach(el => el.classList.remove('field-error'));
+
+    if (!conceptoEl.value.trim()) {
+        conceptoEl.classList.add('field-error');
+        conceptoEl.focus();
+        ok = false;
+    }
+    if (isNaN(monto) || monto <= 0) {
+        montoEl.classList.add('field-error');
+        if (ok) montoEl.focus();
+        ok = false;
+    }
+    if (!ok) { toast('Completá los campos requeridos.', 'error'); return; }
+
+    const fecha = fechaEl.value || hoyISO();
+
+    if (flujo === 'transferencia') {
+        const origen  = document.getElementById('mov-transf-origen').value;
+        const destino = document.getElementById('mov-transf-destino').value;
+        if (origen === destino) { toast('Origen y destino no pueden ser iguales.', 'error'); return; }
+        DB.movimientos.push({
+            id: DB.nid++, concepto: conceptoEl.value.trim() || 'Transferencia',
+            monto, rubroId: 0, origen, destino, fecha
+        });
+    } else {
+        const rubroId = parseInt(document.getElementById('mov-rubro').value);
+        const origen  = document.getElementById('mov-origen').value;
+        if (isNaN(rubroId)) { toast('Seleccioná un rubro.', 'error'); return; }
+        DB.movimientos.push({
+            id: DB.nid++, concepto: conceptoEl.value.trim(),
+            monto, rubroId, origen, destino: null, fecha
+        });
     }
 
-    function save() {
-        if (tSaveDebounce) clearTimeout(tSaveDebounce);
-        tSaveDebounce = setTimeout(saveImmediate, 300);
+    conceptoEl.value = '';
+    montoEl.value    = '';
+    // Mantener fecha para carga rápida de múltiples asientos
+
+    const btn = document.getElementById('btn-guardar-movimiento');
+    btn.textContent = '✓ Guardado';
+    btn.style.background = 'var(--ingreso)';
+    setTimeout(() => {
+        btn.textContent = '✓ Asentar registro';
+        btn.style.background = '';
+    }, 1000);
+
+    save();
+    resetPaginacion();
+    render();
+}
+
+// ════════════════════════════════════════════════════
+//  GUARDAR RUBRO
+// ════════════════════════════════════════════════════
+function guardarRubro() {
+    const nombreEl  = document.getElementById('rubro-nombre');
+    const tipoEl    = document.getElementById('rubro-tipo');
+    const limiteEl  = document.getElementById('rubro-limite');
+    const editIdEl  = document.getElementById('rubro-edit-id');
+    const claveMes  = document.getElementById('rubro-mes-visor').value;
+    const nombre    = nombreEl.value.trim();
+
+    if (!nombre) { nombreEl.classList.add('field-error'); nombreEl.focus(); toast('Ingresá un nombre.', 'error'); return; }
+    nombreEl.classList.remove('field-error');
+
+    const limiteVal   = tipoEl.value === 'gasto' ? (parseFloat(limiteEl.value) || 0) : 0;
+    let targetRubroId;
+
+    if (editIdEl.value) {
+        const rubro = DB.rubros.find(r => r.id == editIdEl.value);
+        if (rubro) { rubro.nombre = nombre; rubro.tipo = tipoEl.value; }
+        targetRubroId = editIdEl.value;
+        cancelarEdicionRubro();
+    } else {
+        targetRubroId = DB.nid++;
+        DB.rubros.push({ id: targetRubroId, nombre, tipo: tipoEl.value });
     }
 
-    function saveImmediate() {
+    if (tipoEl.value === 'gasto') {
+        if (!DB.presupuestosHistoricos[claveMes]) DB.presupuestosHistoricos[claveMes] = {};
+        DB.presupuestosHistoricos[claveMes][targetRubroId] = limiteVal;
+    }
+
+    nombreEl.value = ''; limiteEl.value = '';
+    toast('Categoría guardada.', 'success');
+    save(); render();
+}
+
+function cancelarEdicionRubro() {
+    document.getElementById('rubro-nombre').value    = '';
+    document.getElementById('rubro-limite').value    = '';
+    document.getElementById('rubro-edit-id').value   = '';
+    document.getElementById('btn-guardar-rubro').textContent = 'Guardar categoría';
+    document.getElementById('btn-cancelar-rubro').style.display = 'none';
+    alternarInputPresupuesto();
+}
+
+function editarRubro(id) {
+    const rubro    = DB.rubros.find(r => r.id === id);
+    if (!rubro) return;
+    const claveMes = document.getElementById('rubro-mes-visor').value;
+    document.getElementById('rubro-nombre').value   = rubro.nombre;
+    document.getElementById('rubro-tipo').value     = rubro.tipo;
+    document.getElementById('rubro-limite').value   = getLimiteHistorico(claveMes, rubro.id) || '';
+    document.getElementById('rubro-edit-id').value  = rubro.id;
+    alternarInputPresupuesto();
+    document.getElementById('btn-guardar-rubro').textContent      = 'Actualizar';
+    document.getElementById('btn-cancelar-rubro').style.display   = 'inline-flex';
+}
+
+async function eliminarRubro(id) {
+    const ok = await showConfirm('Eliminar categoría', '¿Eliminar este rubro? Los movimientos asociados quedarán sin categoría.', 'Eliminar');
+    if (!ok) return;
+    DB.rubros = DB.rubros.filter(r => r.id !== id);
+    Object.keys(DB.presupuestosHistoricos).forEach(k => { delete DB.presupuestosHistoricos[k][id]; });
+    toast('Categoría eliminada.', 'warning');
+    save(); render();
+}
+
+// ════════════════════════════════════════════════════
+//  ELIMINAR MOVIMIENTO
+// ════════════════════════════════════════════════════
+async function eliminarMovimiento(id) {
+    const ok = await showConfirm('Eliminar asiento', '¿Remover este movimiento del libro diario?', 'Eliminar');
+    if (!ok) return;
+    DB.movimientos = DB.movimientos.filter(m => m.id !== id);
+    toast('Asiento eliminado.', 'warning');
+    save(); render();
+}
+
+// ════════════════════════════════════════════════════
+//  GUARDAR CUENTAS/BANCOS
+// ════════════════════════════════════════════════════
+function guardarCuentas() {
+    DB.cuentas.debito1 = document.getElementById('cfg-debito1').value.trim() || 'Banco 1';
+    DB.cuentas.debito2 = document.getElementById('cfg-debito2').value.trim() || 'Banco 2';
+    DB.cuentas.debito3 = document.getElementById('cfg-debito3').value.trim();
+    toast('Cuentas actualizadas.', 'success');
+    save(); render();
+}
+
+// ════════════════════════════════════════════════════
+//  BACKUP
+// ════════════════════════════════════════════════════
+function exportarBackup() {
+    const ahora  = new Date();
+    const sello  = ahora.toISOString().slice(0,19).replace(/[:T]/g, '-');
+    const blob   = new Blob([JSON.stringify(DB, null, 2)], { type: 'application/json' });
+    const url    = URL.createObjectURL(blob);
+    const a      = document.createElement('a');
+    a.href       = url;
+    a.download   = `finanzaspro_backup_${sello}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Backup exportado.', 'success');
+}
+
+function importarBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function() {
         try {
-            localStorage.setItem(SKEY, JSON.stringify(DB));
-            document.getElementById('storage-warning').style.display = 'none';
-        } catch (error) {
-            if (error.name === 'QuotaExceededError' || error.code === 22) {
-                document.getElementById('storage-warning').style.display = 'inline-block';
+            const parsed = JSON.parse(reader.result);
+            if (!parsed.rubros || !parsed.movimientos) throw new Error('Formato inválido');
+            const ok = await showConfirm('Restaurar backup', `Se importarán ${parsed.movimientos.length} movimientos y ${parsed.rubros.length} rubros. Los datos actuales serán reemplazados.`, 'Restaurar', true);
+            if (!ok) return;
+            DB = migrar(parsed);
+            if (DB.movimientos.length > 0 || DB.rubros.length > 0) {
+                DB.nid = Math.max(...DB.movimientos.map(m => m.id || 0), ...DB.rubros.map(r => r.id || 0)) + 1;
+            }
+            document.getElementById('cfg-debito1').value = DB.cuentas.debito1;
+            document.getElementById('cfg-debito2').value = DB.cuentas.debito2;
+            document.getElementById('cfg-debito3').value = DB.cuentas.debito3 || '';
+            saveImmediate(); resetPaginacion(); render();
+            toast('Base de datos restaurada.', 'success');
+        } catch(e) {
+            toast('Error al importar: archivo inválido.', 'error', 4000);
+        }
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
+
+// ════════════════════════════════════════════════════
+//  FILTROS Y PAGINACIÓN
+// ════════════════════════════════════════════════════
+function resetPaginacion() { currentLimitMov = ITEMS_PER_PAGE; }
+function limpiarFiltrosFecha() {
+    document.getElementById('filtro-fecha-desde').value = '';
+    document.getElementById('filtro-fecha-hasta').value = '';
+    resetPaginacion(); render();
+}
+
+function getTipoMov(m) {
+    if (m.rubroId === 0) return 'transferencia';
+    const rubro = DB.rubros.find(r => r.id === m.rubroId);
+    return rubro ? rubro.tipo : 'gasto';
+}
+
+function obtenerFiltrados() {
+    const fValor  = document.getElementById('filtro-avanzado').value || 'all';
+    const desde   = document.getElementById('filtro-fecha-desde').value || null;
+    const hasta   = document.getElementById('filtro-fecha-hasta').value || null;
+
+    return DB.movimientos.filter(m => {
+        const tipo = getTipoMov(m);
+        if (fValor !== 'all') {
+            if ((fValor === 'gasto' || fValor === 'ingreso') && tipo !== fValor) return false;
+            if (fValor === 'transferencia' && tipo !== 'transferencia')            return false;
+            if (fValor.startsWith('f-')) {
+                const cuenta = fValor.slice(2);
+                if (m.origen !== cuenta && m.destino !== cuenta) return false;
             }
         }
-    }
+        // Fechas ISO → comparación directa de strings
+        if (desde && m.fecha < desde) return false;
+        if (hasta && m.fecha > hasta) return false;
+        return true;
+    });
+}
 
-    function resetPaginacion() {
-        currentLimitMovimientos = ITEMS_PER_PAGE;
-    }
+// ════════════════════════════════════════════════════
+//  MÉTRICAS GLOBALES
+// ════════════════════════════════════════════════════
+function calcularMetricas() {
+    const saldos = { efectivo: 0, debito1: 0, debito2: 0, debito3: 0 };
+    let tIngresos = 0, tGastos = 0;
+    const mapaMensual = {};
 
-    function switchTab(tabId) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        event.currentTarget.classList.add('active');
-    }
+    DB.movimientos.forEach(m => {
+        const tipo = getTipoMov(m);
+        if (tipo === 'ingreso') tIngresos += m.monto;
+        else if (tipo === 'gasto') tGastos += m.monto;
 
-    function alternarInputPresupuestoRubro() {
-        const tipo = document.getElementById('rubro-tipo').value;
-        document.getElementById('group-rubro-presupuesto').style.display = tipo === 'gasto' ? 'block' : 'none';
-    }
-
-    function alternarVisibilidadFormularioCarga() {
-        const flujo = document.getElementById('mov-tipo-flujo').value;
-        document.getElementById('wrapper-carga-estandar').style.display = flujo === 'transferencia' ? 'none' : 'block';
-        document.getElementById('wrapper-carga-transferencia').style.display = flujo === 'transferencia' ? 'block' : 'none';
-    }
-
-    function limpiarFiltrosFecha() {
-        document.getElementById('filtro-fecha-desde').value = '';
-        document.getElementById('filtro-fecha-hasta').value = '';
-        resetPaginacion();
-        render();
-    }
-
-    function inicializarOpcionesDeMesesEnVisor() {
-        const select = document.getElementById('rubro-mes-visor');
-        select.innerHTML = '';
-        const hoy = new Date();
-        const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        for (let i = -6; i <= 6; i++) {
-            const d = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
-            const clave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-            const opt = document.createElement('option');
-            opt.value = clave; opt.textContent = `${nombresMeses[d.getMonth()]} ${d.getFullYear()}`;
-            if(i === 0) opt.selected = true;
-            select.appendChild(opt);
-        }
-    }
-
-    function obtenerLimiteHistoricoRubro(claveMes, rubroId) {
-        if (!DB.presupuestosHistoricos[claveMes]) {
-            const partes = claveMes.split('-');
-            const dMesAnterior = new Date(parseInt(partes[0]), parseInt(partes[1]) - 2, 1);
-            const claveAnterior = `${dMesAnterior.getFullYear()}-${String(dMesAnterior.getMonth() + 1).padStart(2, '0')}`;
-            if (Object.keys(DB.presupuestosHistoricos).length > 0 && parseInt(partes[0]) > 2020) {
-                return obtenerLimiteHistoricoRubro(claveAnterior, rubroId);
-            }
-            return 0;
-        }
-        return DB.presupuestosHistoricos[claveMes][rubroId] || 0;
-    }
-
-    function guardarNombresBancos() {
-        DB.bancos.debito1 = document.getElementById('cfg-debito1').value.trim() || 'Banco 1';
-        DB.bancos.debito2 = document.getElementById('cfg-debito2').value.trim() || 'Banco 2';
-        save(); render();
-    }
-
-    function guardarRubro() {
-        const nombreInput = document.getElementById('rubro-nombre');
-        const tipoSelect = document.getElementById('rubro-tipo');
-        const limiteInput = document.getElementById('rubro-limite');
-        const editIdInput = document.getElementById('rubro-edit-id');
-        const claveMesSeleccionado = document.getElementById('rubro-mes-visor').value;
-        const nombre = nombreInput.value.trim();
-        if (!nombre) return;
-
-        const limiteVal = tipoSelect.value === 'gasto' ? (parseFloat(limiteInput.value) || 0) : 0;
-        let targetRubroId = null;
-
-        if (editIdInput.value) {
-            const rubro = DB.rubros.find(r => r.id == editIdInput.value);
-            if (rubro) { rubro.nombre = nombre; rubro.tipo = tipoSelect.value; }
-            targetRubroId = editIdInput.value;
-            document.getElementById('btn-guardar-rubro').textContent = 'Guardar Categoría';
-            document.getElementById('btn-cancelar-rubro').style.display = 'none';
-            editIdInput.value = '';
+        if (tipo === 'transferencia') {
+            if (saldos[m.origen] !== undefined) saldos[m.origen] -= m.monto;
+            if (saldos[m.destino] !== undefined) saldos[m.destino] += m.monto;
         } else {
-            targetRubroId = DB.nid++;
-            DB.rubros.push({ id: targetRubroId, nombre: nombre, tipo: tipoSelect.value });
-        }
-
-        if (tipoSelect.value === 'gasto') {
-            if (!DB.presupuestosHistoricos[claveMesSeleccionado]) DB.presupuestosHistoricos[claveMesSeleccionado] = {};
-            DB.presupuestosHistoricos[claveMesSeleccionado][targetRubroId] = limiteVal;
-        }
-
-        nombreInput.value = ''; limiteInput.value = '';
-        save(); render();
-    }
-
-    function editarRubro(id) {
-        const rubro = DB.rubros.find(r => r.id == id);
-        if (!rubro) return;
-        const claveMesSeleccionado = document.getElementById('rubro-mes-visor').value;
-        document.getElementById('rubro-nombre').value = rubro.nombre;
-        document.getElementById('rubro-tipo').value = rubro.tipo;
-        document.getElementById('rubro-limite').value = obtenerLimiteHistoricoRubro(claveMesSeleccionado, rubro.id) || '';
-        document.getElementById('rubro-edit-id').value = rubro.id;
-        alternarInputPresupuestoRubro();
-        document.getElementById('btn-guardar-rubro').textContent = 'Actualizar';
-        document.getElementById('btn-cancelar-rubro').style.display = 'inline-flex';
-    }
-
-    function eliminarRubro(id) {
-        if (!confirm('¿Eliminar rubro?')) return;
-        DB.rubros = DB.rubros.filter(r => r.id != id);
-        Object.keys(DB.presupuestosHistoricos).forEach(clv => { if(DB.presupuestosHistoricos[clv][id]) delete DB.presupuestosHistoricos[clv][id]; });
-        save(); render();
-    }
-
-    function guardarMovimiento() {
-        const conceptoInput = document.getElementById('mov-concepto');
-        const montoInput = document.getElementById('mov-monto');
-        const flujo = document.getElementById('mov-tipo-flujo').value;
-        const monto = parseFloat(montoInput.value);
-
-        if (isNaN(monto) || monto <= 0) return alert('Verifique el monto.');
-
-        if (flujo === 'transferencia') {
-            const origen = document.getElementById('mov-transf-origen').value;
-            const destino = document.getElementById('mov-transf-destino').value;
-            if(origen === destino) return alert('Cuentas iguales.');
-            DB.movimientos.push({
-                id: DB.nid++, concepto: conceptoInput.value.trim() || 'Transferencia', monto: monto, rubroId: 0, origen: origen, destino: destino, fecha: new Date().toLocaleDateString()
-            });
-        } else {
-            const rubroId = parseInt(document.getElementById('mov-rubro').value);
-            const origen = document.getElementById('mov-origen').value;
-            if (isNaN(rubroId)) return alert('Seleccione un rubro.');
-            DB.movimientos.push({
-                id: DB.nid++, concepto: conceptoInput.value.trim() || 'General', monto: monto, rubroId: rubroId, origen: origen, destino: null, fecha: new Date().toLocaleDateString()
-            });
-        }
-        conceptoInput.value = ''; montoInput.value = '';
-        save(); resetPaginacion(); render();
-    }
-
-    function eliminarMovimiento(id) {
-        if (!confirm('¿Remover asiento?')) return;
-        DB.movimientos = DB.movimientos.filter(m => m.id != id);
-        save(); render();
-    }
-
-    function exportarBackup() {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB, null, 2));
-        const downloadAnchor = document.createElement('a');
-        const ahora = new Date();
-        const fechaSello = ahora.toISOString().slice(0,10);
-        const horaSello = ahora.toTimeString().slice(0,8).replace(/:/g, '-');
-        downloadAnchor.setAttribute("href", dataStr); 
-        downloadAnchor.setAttribute("download", `backup_contable_${fechaSello}_${horaSello}.json`);
-        document.body.appendChild(downloadAnchor); 
-        downloadAnchor.click(); 
-        downloadAnchor.remove();
-    }
-
-    function importarBackup(event) {
-        const reader = new FileReader();
-        reader.onload = function() {
-            try {
-                const parsed = JSON.parse(reader.result);
-                if (parsed.rubros && parsed.movimientos) {
-                    if (confirm('¿Restaurar copia de respaldo?')) {
-                        DB = ejecutarMigracionesInternas(parsed);
-                        if(DB.movimientos.length > 0) DB.nid = Math.max(...DB.movimientos.map(m => m.id), ...DB.rubros.map(r => r.id)) + 1;
-                        document.getElementById('cfg-debito1').value = DB.bancos.debito1; document.getElementById('cfg-debito2').value = DB.bancos.debito2;
-                        saveImmediate(); resetPaginacion(); render(); alert('Base de datos sincronizada.');
-                    }
-                }
-            } catch(e) { alert('Error en la importación de datos.'); }
-        };
-        if(event.target.files[0]) reader.readAsText(event.target.files[0]);
-    }
-
-    if ('serviceWorker' in navigator) {
-        const repoPath = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
-        navigator.serviceWorker.register(repoPath + 'sw.js', { scope: repoPath }).then(reg => {
-            reg.addEventListener('updatefound', () => {
-                const newWorker = reg.installing;
-                newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        document.getElementById('pwa-update-toast').style.display = 'inline-block';
-                    }
-                });
-            });
-        }).catch(() => {});
-    }
-
-    function forzarRecargaPWA() { window.location.reload(); }
-
-    function formatMoneda(valor) { return '$' + Number(valor).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
-
-    function parseStringToDate(fechaStr) {
-        if(!fechaStr) return null;
-        let partes = fechaStr.includes('/') ? fechaStr.split('/') : fechaStr.split('-');
-        return partes.length === 3 ? (partes[0].length === 4 ? new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2])) : new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]))) : new Date(fechaStr);
-    }
-
-    function obtenerClaveMesActualReal() {
-        const hoy = new Date();
-        return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
-    }
-
-    function obtenerMesClave(fechaStr) {
-        const dateObj = parseStringToDate(fechaStr);
-        if(!dateObj || isNaN(dateObj.getTime())) return { orden: '9999-12', etiqueta: 'General' };
-        const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        return { orden: `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`, etiqueta: `${nombresMeses[dateObj.getMonth()]} ${dateObj.getFullYear()}` };
-    }
-
-    function obtenerMovimientosFiltrados() {
-        const fValor = document.getElementById('filtro-avanzado').value || 'all';
-        const dateDesde = document.getElementById('filtro-fecha-desde').value ? new Date(document.getElementById('filtro-fecha-desde').value + 'T00:00:00') : null;
-        const dateHasta = document.getElementById('filtro-fecha-hasta').value ? new Date(document.getElementById('filtro-fecha-hasta').value + 'T23:59:59') : null;
-
-        return DB.movimientos.filter(m => {
-            const rubro = DB.rubros.find(r => r.id === m.rubroId);
-            const tipo = m.rubroId === 0 ? 'transferencia' : (rubro ? rubro.tipo : 'gasto');
-            if (fValor !== 'all') {
-                if ((fValor === 'gasto' || fValor === 'ingreso') && tipo !== fValor) return false;
-                if (fValor === 'transferencia' && tipo !== 'transferencia') return false;
-                if (fValor === 'f-efectivo' && m.origen !== 'efectivo' && m.destino !== 'efectivo') return false;
-                if (fValor === 'f-debito1' && m.origen !== 'debito1' && m.destino !== 'debito1') return false;
-                if (fValor === 'f-debito2' && m.origen !== 'debito2' && m.destino !== 'debito2') return false;
+            if (saldos[m.origen] !== undefined) {
+                saldos[m.origen] += tipo === 'ingreso' ? m.monto : -m.monto;
             }
-            const fechaMov = parseStringToDate(m.fecha);
-            if (fechaMov) {
-                if (dateDesde && fechaMov < dateDesde) return false;
-                if (dateHasta && fechaMov > dateHasta) return false;
+            const clave = claveMesDeISO(m.fecha);
+            if (!mapaMensual[clave]) {
+                mapaMensual[clave] = { etiqueta: etiquetaMes(clave), ingresos: 0, gastos: 0, desgloseRubros: {} };
             }
-            return true;
-        });
-    }
-
-    function ejecutarImpresionPWA() {
-        const movimientosAImprimir = obtenerMovimientosFiltrados();
-        if(movimientosAImprimir.length === 0) return alert('Sin datos.');
-        const contenedor = document.getElementById('contenedor-impresion-pwa');
-        let filasHtml = '';
-        [...movimientosAImprimir].reverse().forEach((m, index) => {
-            const rubro = DB.rubros.find(r => r.id === m.rubroId);
-            const tipo = m.rubroId === 0 ? 'transferencia' : (rubro ? rubro.tipo : 'gasto');
-            let txtRubro = m.rubroId === 0 ? 'Traspaso' : (rubro ? rubro.nombre : 'S/R');
-            filasHtml += `<tr style="border-bottom: 1px solid #cbd5e1;"><td style="padding:6px;">${index+1}</td><td style="padding:6px;">${m.fecha}</td><td><strong>${m.concepto}</strong></td><td>${txtRubro}</td><td>${m.origen}</td><td style="text-align:right; font-weight:700; color:${tipo==='gasto'?'#ef4444':'#10b981'}">${formatMoneda(m.monto)}</td></tr>`;
-        });
-        contenedor.innerHTML = `<div style="padding:20px;"><h2>Libro Diario Sincronizado</h2><table><thead><tr style="background:#0f172a; color:white;"><th style="padding:6px;">N°</th><th style="padding:6px;">Fecha</th><th>Detalle</th><th>Rubro</th><th>Medio</th><th style="text-align:right;">Monto</th></tr></thead><tbody>${filasHtml}</tbody></table></div>`;
-        window.print();
-    }
-
-    function calcularMetricasGlobales() {
-        let metricas = {
-            tIngresos: 0, tGastos: 0, balEfectivo: 0, balDebito1: 0, balDebito2: 0, mapaMensual: {}
-        };
-
-        DB.movimientos.forEach(m => {
-            const rubro = DB.rubros.find(r => r.id === m.rubroId);
-            const tipo = m.rubroId === 0 ? 'transferencia' : (rubro ? rubro.tipo : 'gasto');
-            
-            if (tipo === 'ingreso') metricas.tIngresos += m.monto; 
-            else if (tipo === 'gasto') metricas.tGastos += m.monto;
-
-            if (tipo === 'transferencia') {
-                if (m.origen === 'efectivo') metricas.balEfectivo -= m.monto; else if (m.origen === 'debito1') metricas.balDebito1 -= m.monto; else if (m.origen === 'debito2') metricas.balDebito2 -= m.monto;
-                if (m.destino === 'efectivo') metricas.balEfectivo += m.monto; else if (m.destino === 'debito1') metricas.balDebito1 += m.monto; else if (m.destino === 'debito2') metricas.balDebito2 += m.monto;
-            } else {
-                if (m.origen === 'efectivo') { if (tipo === 'ingreso') metricas.balEfectivo += m.monto; else metricas.balEfectivo -= m.monto; }
-                else if (m.origen === 'debito1') { if (tipo === 'ingreso') metricas.balDebito1 += m.monto; else metricas.balDebito1 -= m.monto; }
-                else if (m.origen === 'debito2') { if (tipo === 'ingreso') metricas.balDebito2 += m.monto; else metricas.balDebito2 -= m.monto; }
-                
-                const infoMes = obtenerMesClave(m.fecha);
-                if (!metricas.mapaMensual[infoMes.orden]) {
-                    metricas.mapaMensual[infoMes.orden] = { etiqueta: infoMes.etiqueta, ingresos: 0, gastos: 0, desgloseRubros: {} };
-                }
-                if (tipo === 'ingreso') metricas.mapaMensual[infoMes.orden].ingresos += m.monto;
-                else {
-                    metricas.mapaMensual[infoMes.orden].gastos += m.monto;
-                    if (!metricas.mapaMensual[infoMes.orden].desgloseRubros[m.rubroId]) metricas.mapaMensual[infoMes.orden].desgloseRubros[m.rubroId] = 0;
-                    metricas.mapaMensual[infoMes.orden].desgloseRubros[m.rubroId] += m.monto;
-                }
+            if (tipo === 'ingreso') { mapaMensual[clave].ingresos += m.monto; }
+            else {
+                mapaMensual[clave].gastos += m.monto;
+                mapaMensual[clave].desgloseRubros[m.rubroId] = (mapaMensual[clave].desgloseRubros[m.rubroId] || 0) + m.monto;
             }
-        });
-        return metricas;
-    }
+        }
+    });
+    return { tIngresos, tGastos, saldos, mapaMensual };
+}
 
-    function render() {
-        const claveMesVisorRubros = document.getElementById('rubro-mes-visor').value;
-        const coreMetricas = calcularMetricasGlobales();
+// ════════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════════
+function render() {
+    const metricas     = calcularMetricas();
+    const claveMesVisor= document.getElementById('rubro-mes-visor').value;
+    const cuentas      = getCuentas();
 
-        DB.rubros.sort((a, b) => a.nombre.localeCompare(b.nombre));
-        const listaRubros = document.getElementById('lista-rubros');
-        listaRubros.innerHTML = '';
-        DB.rubros.forEach(r => {
-            const div = document.createElement('div'); div.className = 'compact-row';
-            const limHistorico = obtenerLimiteHistoricoRubro(claveMesVisorRubros, r.id);
-            const txtLimit = limHistorico > 0 ? ` [Límite: ${formatMoneda(limHistorico)}]` : (r.tipo === 'gasto' ? ' [Sin límite]' : '');
-            
-            div.innerHTML = `<span><strong>${r.nombre}</strong> <span class="badge ${r.tipo}">${r.tipo[0]}</span><small style="color:var(--text-muted); font-weight:600;">${txtLimit}</small></span><div class="actions-wrapper"><button class="btn-trigger edit-b">✏️</button><button class="btn-trigger danger del-b">🗑️</button></div>`;
-            div.querySelector('.edit-b').addEventListener('click', () => { editarRubro(r.id); });
-            div.querySelector('.del-b').addEventListener('click', () => eliminarRubro(r.id));
+    // ── Header: métricas ──
+    const balTotal = metricas.tIngresos - metricas.tGastos;
+    setValColor('view-balance',       fmt(balTotal),                balTotal >= 0);
+    setValColor('view-bal-efectivo',  fmt(metricas.saldos.efectivo), metricas.saldos.efectivo >= 0);
+    setValColor('view-bal-debito1',   fmt(metricas.saldos.debito1),  metricas.saldos.debito1 >= 0);
+    setValColor('view-bal-debito2',   fmt(metricas.saldos.debito2),  metricas.saldos.debito2 >= 0);
+    setValColor('view-bal-debito3',   fmt(metricas.saldos.debito3),  metricas.saldos.debito3 >= 0);
+    document.getElementById('label-hdr-debito1').textContent = DB.cuentas.debito1;
+    document.getElementById('label-hdr-debito2').textContent = DB.cuentas.debito2;
+    document.getElementById('label-hdr-debito3').textContent = DB.cuentas.debito3 || '';
+    // Ocultar cuenta3 si está vacía
+    const hasDeb3 = !!DB.cuentas.debito3;
+    document.getElementById('grp-debito3').style.display = hasDeb3 ? '' : 'none';
+    document.getElementById('sep-d2').style.display = hasDeb3 ? '' : 'none';
+
+    // ── Presupuesto header ──
+    let presupTotal = 0, gastosMesActual = 0;
+    const claveMesActual = obtenerClaveMesActual();
+    DB.rubros.filter(r => r.tipo === 'gasto').forEach(r => {
+        presupTotal += getLimiteHistorico(claveMesActual, r.id);
+    });
+    gastosMesActual = metricas.mapaMensual[claveMesActual]?.gastos || 0;
+    const restante  = presupTotal - gastosMesActual;
+    document.getElementById('view-budget-general').textContent = `${fmt(gastosMesActual)} / ${fmt(presupTotal)}`;
+    document.getElementById('view-budget-general').style.color = gastosMesActual > presupTotal ? 'var(--gasto)' : 'var(--primary)';
+    setValColor('view-budget-restante', fmt(restante), restante >= 0);
+
+    // ── Selects de cuentas ──
+    const optsHTML = cuentas.map(c => `<option value="${c.key}">${c.icon} ${c.label}</option>`).join('');
+    ['mov-origen','mov-transf-origen','mov-transf-destino'].forEach(id => {
+        const prev = document.getElementById(id).value;
+        document.getElementById(id).innerHTML = optsHTML;
+        if (prev) document.getElementById(id).value = prev;
+    });
+
+    // ── Select filtro avanzado ──
+    const filtroEl   = document.getElementById('filtro-avanzado');
+    const prevFiltro = filtroEl.value || 'all';
+    filtroEl.innerHTML = `
+        <option value="all">🔍 Todos</option>
+        <option value="gasto">🔻 Gastos</option>
+        <option value="ingreso">🔺 Ingresos</option>
+        <option value="transferencia">⇅ Transferencias</option>
+        ${cuentas.map(c => `<option value="f-${c.key}">${c.icon} ${c.label}</option>`).join('')}
+    `;
+    filtroEl.value = prevFiltro;
+
+    // ── Select rubros en formulario ──
+    const rubroEl = document.getElementById('mov-rubro');
+    const prevRub = rubroEl.value;
+    const rubOrd  = [...DB.rubros].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    rubroEl.innerHTML = rubOrd.map(r => `<option value="${r.id}">${r.nombre} (${r.tipo === 'gasto' ? 'G' : 'I'})</option>`).join('');
+    if (prevRub) rubroEl.value = prevRub;
+
+    // ── Lista rubros ──
+    const listaRubros = document.getElementById('lista-rubros');
+    listaRubros.innerHTML = '';
+    if (rubOrd.length === 0) {
+        listaRubros.innerHTML = emptyState('📁', 'Sin categorías. Agregá una arriba.');
+    } else {
+        rubOrd.forEach(r => {
+            const lim = getLimiteHistorico(claveMesVisor, r.id);
+            const txtLim = lim > 0 ? `<span style="color:var(--text-muted); font-size:10px; font-weight:600;"> · ${fmt(lim)}</span>` : (r.tipo === 'gasto' ? `<span style="color:var(--text-muted); font-size:10px;"> · sin límite</span>` : '');
+            const div = document.createElement('div');
+            div.className = 'rub-row';
+            div.innerHTML = `
+                <span><strong style="font-size:12px;">${r.nombre}</strong><span class="badge ${r.tipo}" style="margin-left:4px;">${r.tipo === 'gasto' ? 'G' : 'I'}</span>${txtLim}</span>
+                <div style="display:flex; gap:2px;">
+                    <button class="btn-icon" data-edit="${r.id}" title="Editar">✏️</button>
+                    <button class="btn-icon danger" data-del="${r.id}" title="Eliminar">🗑️</button>
+                </div>`;
+            div.querySelector('[data-edit]').addEventListener('click', () => editarRubro(r.id));
+            div.querySelector('[data-del]').addEventListener('click',  () => eliminarRubro(r.id));
             listaRubros.appendChild(div);
         });
+    }
 
-        const rubroSelect = document.getElementById('mov-rubro'); rubroSelect.innerHTML = '';
-        DB.rubros.forEach(r => {
-            const opt = document.createElement('option'); opt.value = r.id; opt.textContent = `${r.nombre} (${r.tipo[0].toUpperCase()})`; rubroSelect.appendChild(opt);
-        });
+    // ── Libro diario ──
+    const filtrados = obtenerFiltrados();
+    const fValorActivo = filtroEl.value || 'all';
 
-        const opcionesCuentasHtml = `<option value="efectivo">💵 Efectivo</option><option value="debito1">💳 ${DB.bancos.debito1}</option><option value="debito2">💳 ${DB.bancos.debito2}</option>`;
-        document.getElementById('mov-origen').innerHTML = opcionesCuentasHtml;
-        document.getElementById('mov-transf-origen').innerHTML = opcionesCuentasHtml;
-        document.getElementById('mov-transf-destino').innerHTML = opcionesCuentasHtml;
-
-        const filtroSelect = document.getElementById('filtro-avanzado');
-        const fFiltroAnterior = filtroSelect.value || 'all';
-        filtroSelect.innerHTML = `
-            <option value="all">🔍 Todo</option>
-            <option value="gasto">🔻 Gastos</option>
-            <option value="ingreso">🔺 Ingresos</option>
-            <option value="transferencia">⇅ Transferencias</option>
-            <option value="f-efectivo">💵 Efec</option>
-            <option value="f-debito1">💳 ${DB.bancos.debito1}</option>
-            <option value="f-debito2">💳 ${DB.bancos.debito2}</option>
-        `;
-        filtroSelect.value = fFiltroAnterior;
-
-        const filtrados = obtenerMovimientosFiltrados();
-        const fValorActivo = filtroSelect.value || 'all';
-        
-        let sumaAcumuladaFiltrada = 0;
-        
-        filtrados.forEach(m => {
-            const rubro = DB.rubros.find(r => r.id === m.rubroId);
-            const tipo = m.rubroId === 0 ? 'transferencia' : (rubro ? rubro.tipo : 'gasto');
-            
-            if (fValorActivo === 'gasto' || fValorActivo === 'ingreso') {
-                sumaAcumuladaFiltrada += m.monto;
-            } else if (fValorActivo.startsWith('f-')) {
-                const targetCuenta = fValorActivo.replace('f-', '');
-                if (tipo === 'transferencia') {
-                    if (m.origen === targetCuenta) sumaAcumuladaFiltrada -= m.monto;
-                    if (m.destino === targetCuenta) sumaAcumuladaFiltrada += m.monto;
-                } else {
-                    if (m.origen === targetCuenta) {
-                        if (tipo === 'ingreso') sumaAcumuladaFiltrada += m.monto; else sumaAcumuladaFiltrada -= m.monto;
-                    }
-                }
+    // Suma contadora
+    let suma = 0;
+    filtrados.forEach(m => {
+        const tipo = getTipoMov(m);
+        if (fValorActivo === 'gasto' || fValorActivo === 'ingreso') {
+            suma += m.monto;
+        } else if (fValorActivo.startsWith('f-')) {
+            const cuenta = fValorActivo.slice(2);
+            if (tipo === 'transferencia') {
+                if (m.origen === cuenta)  suma -= m.monto;
+                if (m.destino === cuenta) suma += m.monto;
             } else {
-                if (tipo === 'ingreso') sumaAcumuladaFiltrada += m.monto;
-                else if (tipo === 'gasto') sumaAcumuladaFiltrada -= m.monto;
+                if (m.origen === cuenta) suma += tipo === 'ingreso' ? m.monto : -m.monto;
+            }
+        } else {
+            if (tipo === 'ingreso')     suma += m.monto;
+            else if (tipo === 'gasto')  suma -= m.monto;
+        }
+    });
+
+    const totalEl = document.getElementById('live-total-unico');
+    totalEl.textContent = fmt(Math.abs(suma));
+    totalEl.style.color = fValorActivo === 'gasto' ? 'var(--gasto)' : fValorActivo === 'ingreso' ? 'var(--ingreso)' : suma >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
+    document.getElementById('live-count-label').textContent = `${filtrados.length} asiento${filtrados.length !== 1 ? 's' : ''}`;
+
+    const listaMov = document.getElementById('lista-movimientos');
+    listaMov.innerHTML = '';
+    if (filtrados.length === 0) {
+        listaMov.innerHTML = emptyState('📋', 'Sin movimientos para los filtros actuales.');
+    } else {
+        [...filtrados].reverse().slice(0, currentLimitMov).forEach(m => {
+            const tipo   = getTipoMov(m);
+            const rubro  = DB.rubros.find(r => r.id === m.rubroId);
+            const nRubro = m.rubroId === 0 ? 'Traspaso' : (rubro?.nombre || 'S/R');
+            const signo  = tipo === 'gasto' ? '-' : tipo === 'ingreso' ? '+' : '⇅';
+            const medio  = tipo === 'transferencia'
+                ? `<span class="badge wallet">${labelCuenta(m.origen).slice(0,6)}→${labelCuenta(m.destino).slice(0,6)}</span>`
+                : `<span class="badge wallet">${labelCuenta(m.origen)}</span>`;
+
+            const div = document.createElement('div');
+            div.className = 'mov-row';
+            div.innerHTML = `
+                <div class="mov-row-left">
+                    <div class="mov-row-concept" title="${m.concepto}">${m.concepto}</div>
+                    <div class="mov-row-meta">
+                        <span class="mov-row-date">${fechaDisplay(m.fecha)}</span>
+                        <span class="badge ${tipo === 'transferencia' ? 'transf' : tipo}">${nRubro}</span>
+                        ${medio}
+                    </div>
+                </div>
+                <div class="mov-row-right">
+                    <span class="mov-amount" style="color:var(--${tipo === 'transferencia' ? 'transferencia' : tipo})">${signo}${fmt(m.monto)}</span>
+                    <button class="btn-icon danger" data-del="${m.id}" title="Eliminar">🗑️</button>
+                </div>`;
+            div.querySelector('[data-del]').addEventListener('click', () => eliminarMovimiento(m.id));
+            listaMov.appendChild(div);
+        });
+
+        if (filtrados.length > currentLimitMov) {
+            const btnMas = document.createElement('button');
+            btnMas.className   = 'btn-secondary btn-block';
+            btnMas.style.cssText = 'margin-top:4px; font-size:11px;';
+            btnMas.textContent = `Ver más (${filtrados.length - currentLimitMov} restantes)`;
+            btnMas.onclick = () => { currentLimitMov += ITEMS_PER_PAGE; render(); };
+            listaMov.appendChild(btnMas);
+        }
+    }
+
+    // ── Reporte mensual ──
+    const listaReporte = document.getElementById('lista-reporte-mensual');
+    listaReporte.innerHTML = '';
+    const mesesOrdenados = Object.keys(metricas.mapaMensual).sort().reverse();
+    if (mesesOrdenados.length === 0) {
+        listaReporte.innerHTML = emptyState('📈', 'Sin datos de períodos aún.');
+    }
+    mesesOrdenados.forEach(clave => {
+        const datos = metricas.mapaMensual[clave];
+        let htmlBudgets = '';
+        let totalPresup = 0;
+
+        DB.rubros.filter(r => r.tipo === 'gasto').forEach(r => {
+            const lim = getLimiteHistorico(clave, r.id);
+            if (lim > 0) {
+                totalPresup += lim;
+                const gastado = datos.desgloseRubros[r.id] || 0;
+                const pct     = Math.min((gastado / lim) * 100, 100);
+                const color   = pct >= 100 ? 'var(--gasto)' : pct >= 85 ? 'var(--transferencia)' : 'var(--primary)';
+                htmlBudgets += `
+                    <div class="budget-row-report">
+                        <div style="display:flex; justify-content:space-between; font-size:10px; font-weight:700;">
+                            <span style="color:var(--text-label)">${r.nombre}</span>
+                            <span style="color:${pct >= 100 ? 'var(--gasto)' : 'var(--text-main)'}">${fmt(gastado)} / ${fmt(lim)}</span>
+                        </div>
+                        <div class="budget-bar-bg"><div class="budget-bar-fill" style="width:${pct}%; background:${color};"></div></div>
+                    </div>`;
             }
         });
 
-        const elTotalUnico = document.getElementById('live-total-unico');
-        elTotalUnico.textContent = formatMoneda(Math.abs(sumaAcumuladaFiltrada));
-        if (fValorActivo === 'gasto') elTotalUnico.style.color = 'var(--gasto)';
-        else if (fValorActivo === 'ingreso') elTotalUnico.style.color = 'var(--ingreso)';
-        else elTotalUnico.style.color = sumaAcumuladaFiltrada >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
+        const neto  = datos.ingresos - datos.gastos;
+        const esMes = clave === claveMesActual;
+        const div   = document.createElement('div');
+        div.className = 'month-card';
+        if (esMes) div.style.borderColor = 'var(--primary)';
+        div.innerHTML = `
+            <div class="month-header">
+                <span>${datos.etiqueta}</span>
+                ${esMes ? '<span style="font-size:9px; font-weight:700; color:var(--primary); background:var(--primary-light); padding:1px 5px; border-radius:3px;">MES ACTUAL</span>' : ''}
+            </div>
+            <div class="month-data"><span style="color:var(--text-muted)">Presupuesto total</span><span style="color:var(--primary); font-weight:700;">${fmt(totalPresup)}</span></div>
+            <div class="month-data"><span style="color:var(--text-muted)">Gastos realizados</span><span style="color:var(--gasto); font-weight:700;">−${fmt(datos.gastos)}</span></div>
+            <div class="month-data"><span style="color:var(--text-muted)">Ingresos</span><span style="color:var(--ingreso); font-weight:700;">+${fmt(datos.ingresos)}</span></div>
+            <div style="border-top:1px solid var(--border); margin-top:5px; padding-top:5px; display:flex; justify-content:space-between; font-size:11px; font-weight:800;">
+                <span>Neto (I−G)</span>
+                <span style="color:${neto >= 0 ? 'var(--ingreso)' : 'var(--gasto)'}">${neto >= 0 ? '+' : ''}${fmt(neto)}</span>
+            </div>
+            ${htmlBudgets ? `<div style="margin-top:6px; border-top:1px dashed var(--border); padding-top:4px;">${htmlBudgets}</div>` : ''}
+        `;
+        listaReporte.appendChild(div);
+    });
+}
 
-        const listaMovimientos = document.getElementById('lista-movimientos'); 
-        listaMovimientos.innerHTML = '';
-        
-        if (filtrados.length === 0) {
-            listaMovimientos.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-muted); font-size:11px;">Sin registros.</div>`;
-        } else {
-            const subConjuntoAMostrar = [...filtrados].reverse().slice(0, currentLimitMovimientos);
-            
-            subConjuntoAMostrar.forEach(m => {
-                const rubro = DB.rubros.find(r => r.id === m.rubroId);
-                const tipo = m.rubroId === 0 ? 'transferencia' : (rubro ? rubro.tipo : 'gasto');
-                const nRubro = m.rubroId === 0 ? 'Traspaso' : (rubro ? rubro.nombre : 'S/R');
-                let badgeClase = tipo === 'transferencia' ? 'transf' : tipo;
-                let txtMedio = tipo === 'transferencia' ? `<span class="badge wallet">${m.origen.slice(0,4)} ➔ ${m.destino.slice(0,4)}</span>` : `<span class="badge wallet">${m.origen}</span>`;
-                const div = document.createElement('div'); div.className = 'compact-row';
-                div.innerHTML = `<div><strong style="color:#0f172a;">${m.concepto}</strong><span style="color:var(--text-muted); font-size:10px; margin-left:4px;">${m.fecha}</span><br><span class="badge ${badgeClase}">${nRubro}</span>${txtMedio}</div><div class="actions-wrapper" style="align-items:center;"><span style="font-weight:700; margin-right:6px; color:var(--${tipo})">${tipo === 'gasto' ? '-' : (tipo === 'ingreso' ? '+' : '⇅')}${formatMoneda(m.monto)}</span><button class="btn-trigger danger del-m">🗑️</button></div>`;
-                div.querySelector('.del-m').addEventListener('click', () => eliminarMovimiento(m.id)); 
-                listaMovimientos.appendChild(div);
-            });
+function setValColor(id, text, positive) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    el.style.color = positive ? '' : 'var(--gasto)';
+}
 
-            if (filtrados.length > currentLimitMovimientos) {
-                const btnCargarMas = document.createElement('button');
-                btnCargarMas.className = 'btn-secondary btn-block';
-                btnCargarMas.style.cssText = 'margin-top: 4px; padding: 5px; font-size:11px;';
-                btnCargarMas.textContent = `Ver más asientos (${filtrados.length - currentLimitMovimientos} restantes)`;
-                btnCargarMas.onclick = () => {
-                    currentLimitMovimientos += ITEMS_PER_PAGE;
-                    render();
-                };
-                listaMovimientos.appendChild(btnCargarMas);
-            }
-        }
+function emptyState(icon, msg) {
+    return `<div class="empty-state"><div class="empty-icon">${icon}</div>${msg}</div>`;
+}
 
-        const listaReporte = document.getElementById('lista-reporte-mensual'); listaReporte.innerHTML = '';
-        const mesesOrdenados = Object.keys(coreMetricas.mapaMensual).sort().reverse();
-        
-        let sumaPresupuestosMesActualBarra = 0;
-        let totalGastadoMesActualBarra = 0;
-        const claveMesActualSist = obtenerClaveMesActualReal();
+// ════════════════════════════════════════════════════
+//  IMPRESIÓN
+// ════════════════════════════════════════════════════
+function ejecutarImpresionPWA() {
+    const movs = obtenerFiltrados();
+    if (movs.length === 0) { toast('Sin datos para imprimir.', 'warning'); return; }
+    const filas = [...movs].reverse().map((m, i) => {
+        const tipo   = getTipoMov(m);
+        const rubro  = DB.rubros.find(r => r.id === m.rubroId);
+        const nRubro = m.rubroId === 0 ? 'Traspaso' : (rubro?.nombre || 'S/R');
+        return `<tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:5px">${i+1}</td>
+            <td style="padding:5px">${fechaDisplay(m.fecha)}</td>
+            <td style="padding:5px"><strong>${m.concepto}</strong></td>
+            <td style="padding:5px">${nRubro}</td>
+            <td style="padding:5px">${labelCuenta(m.origen)}</td>
+            <td style="padding:5px; text-align:right; font-weight:700; color:${tipo==='gasto'?'#dc2626':'#059669'}">${fmt(m.monto)}</td>
+        </tr>`;
+    }).join('');
+    document.getElementById('contenedor-impresion-pwa').innerHTML = `
+        <div style="padding:20px; font-family:sans-serif;">
+            <h2 style="margin-bottom:4px;">FinanzasPro · Libro Diario</h2>
+            <p style="color:#64748b; font-size:12px; margin-bottom:16px;">Generado: ${new Date().toLocaleString('es-AR')}</p>
+            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                <thead><tr style="background:#0f172a; color:#fff;">
+                    <th style="padding:6px">N°</th><th style="padding:6px">Fecha</th>
+                    <th style="padding:6px">Detalle</th><th style="padding:6px">Rubro</th>
+                    <th style="padding:6px">Cuenta</th><th style="padding:6px; text-align:right">Monto</th>
+                </tr></thead>
+                <tbody>${filas}</tbody>
+            </table>
+        </div>`;
+    window.print();
+}
 
-        mesesOrdenados.forEach(clave => {
-            const datos = coreMetricas.mapaMensual[clave];
-            let htmlPresupuestosInline = '';
-            let totalPresupuestadoDelMes = 0;
+// ════════════════════════════════════════════════════
+//  PWA / SERVICE WORKER
+// ════════════════════════════════════════════════════
+function forzarRecargaPWA() { window.location.reload(true); }
 
-            DB.rubros.forEach(rub => {
-                if(rub.tipo === 'gasto') {
-                    const limiteEsteRubroEsteMes = obtenerLimiteHistoricoRubro(clave, rub.id);
-                    if(limiteEsteRubroEsteMes > 0) {
-                        totalPresupuestadoDelMes += limiteEsteRubroEsteMes;
-                        const gastadoEnRubro = datos.desgloseRubros[rub.id] || 0;
-                        const porcentaje = Math.min((gastadoEnRubro / limiteEsteRubroEsteMes) * 100, 100);
-                        const colorBarra = porcentaje >= 100 ? 'var(--gasto)' : (porcentaje >= 85 ? 'var(--transferencia)' : 'var(--primary)');
-                        
-                        htmlPresupuestosInline += `
-                            <div class="budget-row-report">
-                                <div style="display:flex; justify-content:space-between; font-size:10px; font-weight:600;">
-                                    <span style="color:#475569;">${rub.nombre}</span>
-                                    <span style="color:${porcentaje >= 100 ? 'var(--gasto)' : '#1e293b'}">${formatMoneda(gastadoEnRubro)} / ${formatMoneda(limiteEsteRubroEsteMes)}</span>
-                                </div>
-                                <div class="budget-bar-bg"><div class="budget-bar-fill" style="width: ${porcentaje}%; background-color: ${colorBarra};"></div></div>
-                            </div>
-                        `;
-                    }
+if ('serviceWorker' in navigator) {
+    const scope = window.location.pathname.replace(/[^/]+$/, '');
+    navigator.serviceWorker.register(scope + 'sw.js', { scope }).then(reg => {
+        reg.addEventListener('updatefound', () => {
+            const w = reg.installing;
+            w.addEventListener('statechange', () => {
+                if (w.state === 'installed' && navigator.serviceWorker.controller) {
+                    document.getElementById('pwa-update-toast').style.display = 'inline-block';
                 }
             });
-
-            if (clave === claveMesActualSist) {
-                sumaPresupuestosMesActualBarra = totalPresupuestadoDelMes;
-                totalGastadoMesActualBarra = datos.gastos;
-            }
-
-            const div = document.createElement('div'); div.className = 'month-card';
-            div.innerHTML = `
-                <div class="month-header">${datos.etiqueta}</div>
-                <div class="month-data"><span>Total Presupuestado Objetivos:</span> <span style="font-weight:600; color:var(--primary);">${formatMoneda(totalPresupuestadoDelMes)}</span></div>
-                <div class="month-data"><span>Gastos Realizados:</span> <span style="color:var(--gasto); font-weight:600;">-${formatMoneda(datos.gastos)}</span></div>
-                <div class="month-data" style="margin-top:4px; padding-top:4px; border-top:1px solid #e2e8f0; font-weight:700;">
-                    <span>Neto Comercial (I-G):</span> <span style="color:${datos.ingresos - datos.gastos >= 0 ? 'var(--ingreso)' : 'var(--gasto)'};">${formatMoneda(datos.ingresos - datos.gastos)}</span>
-                </div>
-                ${htmlPresupuestosInline ? `<div style="margin-top:6px; border-top:1px dashed #cbd5e1; padding-top:4px;">${htmlPresupuestosInline}</div>` : ''}
-            `;
-            listaReporte.appendChild(div);
         });
+    }).catch(() => {});
+}
 
-        if(sumaPresupuestosMesActualBarra === 0) {
-            DB.rubros.forEach(rub => { if(rub.tipo === 'gasto') sumaPresupuestosMesActualBarra += obtenerLimiteHistoricoRubro(claveMesActualSist, rub.id); });
+// ════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function() {
+
+    // Cargar datos
+    let rawData = localStorage.getItem(SKEY);
+    if (!rawData) {
+        for (const k of LEGACY_KEYS) {
+            rawData = localStorage.getItem(k);
+            if (rawData) { localStorage.removeItem(k); break; }
         }
-        
-        const elBgral = document.getElementById('view-budget-general');
-        elBgral.textContent = `${formatMoneda(totalGastadoMesActualBarra)} / ${formatMoneda(sumaPresupuestosMesActualBarra)}`;
-        elBgral.style.color = totalGastadoMesActualBarra > sumaPresupuestosMesActualBarra ? 'var(--gasto)' : 'var(--primary)';
-
-        const presupuestoRestanteMesActual = sumaPresupuestosMesActualBarra - totalGastadoMesActualBarra;
-        const elRestante = document.getElementById('view-budget-restante');
-        elRestante.textContent = formatMoneda(presupuestoRestanteMesActual);
-        elRestante.style.color = presupuestoRestanteMesActual >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
-
-        const balanceTotal = coreMetricas.tIngresos - coreMetricas.tGastos;
-        const bEl = document.getElementById('view-balance'); bEl.textContent = formatMoneda(balanceTotal); bEl.style.color = balanceTotal >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
-        
-        const elEf = document.getElementById('view-bal-efectivo'); elEf.textContent = formatMoneda(coreMetricas.balEfectivo); elEf.style.color = coreMetricas.balEfectivo >= 0 ? '' : 'var(--gasto)';
-        const elD1 = document.getElementById('view-bal-debito1'); elD1.textContent = formatMoneda(coreMetricas.balDebito1); elD1.style.color = coreMetricas.balDebito1 >= 0 ? '' : 'var(--gasto)';
-        const elD2 = document.getElementById('view-bal-debito2'); elD2.textContent = formatMoneda(coreMetricas.balDebito2); elD2.style.color = coreMetricas.balDebito2 >= 0 ? '' : 'var(--gasto)';
-        
-        document.getElementById('label-hdr-debito1').textContent = DB.bancos.debito1;
-        document.getElementById('label-hdr-debito2').textContent = DB.bancos.debito2;
+    }
+    if (rawData) {
+        try { DB = migrar(JSON.parse(rawData)); saveImmediate(); }
+        catch(e) { console.error('Error al cargar datos:', e); }
+    } else {
+        saveImmediate();
     }
 
-    function cancelarEdicionRubro() {
-        document.getElementById('rubro-nombre').value = ''; document.getElementById('rubro-limite').value = ''; document.getElementById('rubro-edit-id').value = ''; document.getElementById('btn-guardar-rubro').textContent = 'Guardar Categoría'; document.getElementById('btn-cancelar-rubro').style.display = 'none'; alternarInputPresupuestoRubro();
-    }
+    // Configurar campos
+    document.getElementById('cfg-debito1').value = DB.cuentas.debito1;
+    document.getElementById('cfg-debito2').value = DB.cuentas.debito2;
+    document.getElementById('cfg-debito3').value = DB.cuentas.debito3 || '';
+    document.getElementById('mov-fecha').value   = hoyISO();
+
+    // Eventos
+    initTabs();
+    initMesesVisor();
+
+    document.getElementById('mov-tipo-flujo').addEventListener('change', alternarFormCarga);
+    document.getElementById('rubro-tipo').addEventListener('change', alternarInputPresupuesto);
+    document.getElementById('btn-guardar-rubro').addEventListener('click', guardarRubro);
+    document.getElementById('btn-cancelar-rubro').addEventListener('click', cancelarEdicionRubro);
+    document.getElementById('btn-guardar-movimiento').addEventListener('click', guardarMovimiento);
+    document.getElementById('btn-guardar-bancos').addEventListener('click', guardarCuentas);
+    document.getElementById('filtro-avanzado').addEventListener('change', () => { resetPaginacion(); render(); });
+    document.getElementById('filtro-fecha-desde').addEventListener('change', () => { resetPaginacion(); render(); });
+    document.getElementById('filtro-fecha-hasta').addEventListener('change', () => { resetPaginacion(); render(); });
+    document.getElementById('rubro-mes-visor').addEventListener('change', render);
+
+    // Atajo teclado: Enter en formulario
+    ['mov-concepto','mov-monto','mov-fecha'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); guardarMovimiento(); }
+        });
+    });
+
+    render();
+
+    // Ocultar splash
+    setTimeout(() => {
+        const splash = document.getElementById('splash');
+        splash.classList.add('fade-out');
+        setTimeout(() => splash.remove(), 400);
+    }, 700);
+});
 </script>
 </body>
 </html>
