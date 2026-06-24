@@ -60,6 +60,16 @@
             opacity: 1; transition: opacity .3s ease;
         }
         #splash.fade-out { opacity: 0; pointer-events: none; }
+        .splash-progress-track {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            height: 3px; background: rgba(255,255,255,0.15);
+        }
+        .splash-progress-bar {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #93c5fd, #60a5fa);
+            border-radius: 0 2px 2px 0;
+            transition: width 5s linear;
+        }
         .splash-logo { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -1px; }
         .splash-logo span { color: #93c5fd; }
         .splash-version { font-size: 11px; color: #93c5fd; font-weight: 600; letter-spacing: .5px; }
@@ -352,9 +362,12 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.29 · Ledger Edition</div>
+    <div class="splash-version">v13.30 · Ledger Edition</div>
     <div class="splash-spinner"></div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:16px;color:rgba(147,197,253,0.75);pointer-events:none">Development by Guille</div>
+    <div class="splash-progress-track">
+        <div class="splash-progress-bar" id="splash-bar"></div>
+    </div>
 </div>
 
 <!-- TOASTS -->
@@ -2329,6 +2342,11 @@ window.addEventListener('DOMContentLoaded', function() {
 
     // Splash: cierre independiente — no depende de async (restaurarCarpetaGuardada)
     const splash = document.getElementById('splash');
+    // Arrancar barra de progreso
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        const bar = document.getElementById('splash-bar');
+        if (bar) bar.style.width = '100%';
+    }));
     setTimeout(() => {
         requestAnimationFrame(() => requestAnimationFrame(() => {
             splash.classList.add('fade-out');
