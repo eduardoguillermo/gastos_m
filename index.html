@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.06 · Ledger Edition</div>
+    <div class="splash-version">v13.07 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -376,7 +376,7 @@
     <header>
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
-            <span class="hdr-version" id="hdr-version">v13.06</span>
+            <span class="hdr-version" id="hdr-version">v13.07</span>
         </div>
 
         <div class="balance-strip">
@@ -588,7 +588,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.06';
+const APP_VERSION = '13.07';
 const SKEY        = 'finanzas-pro-v13';
 const LEGACY_KEYS = [
     'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
@@ -1165,6 +1165,10 @@ function render() {
     document.getElementById('label-hdr-debito1').textContent = DB.cuentas.debito1;
     document.getElementById('label-hdr-debito2').textContent = DB.cuentas.debito2;
     document.getElementById('label-hdr-debito3').textContent = DB.cuentas.debito3 || '';
+    // Sincronizar campos de texto con DB para que no se pierdan al hacer render()
+    document.getElementById('cfg-debito1').value = DB.cuentas.debito1;
+    document.getElementById('cfg-debito2').value = DB.cuentas.debito2;
+    document.getElementById('cfg-debito3').value = DB.cuentas.debito3 || '';
     // Ocultar cuenta3 si está vacía
     const hasDeb3 = !!DB.cuentas.debito3;
     document.getElementById('grp-debito3').style.display = hasDeb3 ? '' : 'none';
