@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.12 · Ledger Edition</div>
+    <div class="splash-version">v13.13 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -376,7 +376,7 @@
     <header>
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
-            <span class="hdr-version" id="hdr-version">v13.12</span>
+            <span class="hdr-version" id="hdr-version">v13.13</span>
         </div>
 
         <div class="balance-strip">
@@ -590,7 +590,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.12';
+const APP_VERSION = '13.13';
 const SKEY        = 'finanzas-pro-v13';
 const LEGACY_KEYS = [
     'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
@@ -1155,12 +1155,28 @@ function actualizarEstadoCarpeta() {
 async function guardarEnCarpeta() {
     if (!_dirHandle) return false;
     try {
-        const nombre   = `finanzaspro_backup_${new Date().toISOString().slice(0,10)}.json`;
+        const hoy    = new Date().toISOString().slice(0,10);
+        const nombre = `finanzaspro_backup_${hoy}.json`;
+
+        // Escribir backup de hoy
         const fh       = await _dirHandle.getFileHandle(nombre, { create: true });
         const writable = await fh.createWritable();
         await writable.write(JSON.stringify(DB, null, 2));
         await writable.close();
         console.log('Backup guardado:', nombre);
+
+        // Eliminar backups con más de 7 días
+        const limite = new Date();
+        limite.setDate(limite.getDate() - 7);
+        for await (const [name] of _dirHandle.entries()) {
+            if (/^finanzaspro_backup_\d{4}-\d{2}-\d{2}\.json$/.test(name)) {
+                const fechaArchivo = new Date(name.slice(18, 28));
+                if (fechaArchivo < limite) {
+                    try { await _dirHandle.removeEntry(name); console.log('Backup viejo eliminado:', name); }
+                    catch(ed) {}
+                }
+            }
+        }
         return true;
     } catch(e) {
         console.error('guardarEnCarpeta:', e.name, e.message);
