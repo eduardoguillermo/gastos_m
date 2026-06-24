@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.17 · Ledger Edition</div>
+    <div class="splash-version">v13.18 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -525,6 +525,12 @@
                 </div>
                 <button id="btn-guardar-bancos" class="btn-secondary btn-block" style="margin-top:2px;">Actualizar nombres</button>
             </div>
+
+            <!-- TAB HISTORIAL -->
+            <div id="tab-historial" class="tab-content">
+                <div id="historial-contenido" style="padding:12px;overflow-y:auto;flex:1;"></div>
+            </div>
+
         </div>
 
         <!-- PANEL CENTRAL: LIBRO DIARIO -->
@@ -592,7 +598,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.17';
+const APP_VERSION = '13.18';
 
 // ── Snapshots locales ─────────────────────────────────────────────────────
 const GM_BKUP_KEY = 'gm_backups';
@@ -904,6 +910,102 @@ function fmt(v) {
 // ════════════════════════════════════════════════════
 //  TABS
 // ════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════
+//  HISTORIAL MENSUAL
+// ════════════════════════════════════════════════════
+function renderHistorial() {
+    const contenedor = document.getElementById('historial-contenido');
+    if (!contenedor) return;
+
+    // Agrupar movimientos por mes
+    const meses = {};
+    DB.movimientos.forEach(m => {
+        if (!m.fecha) return;
+        const clave = claveMesDeISO(m.fecha);
+        if (!meses[clave]) meses[clave] = { ingresos: 0, gastos: 0, movs: [] };
+        const v = parseFloat(m.monto) || 0;
+        if (m.tipo === 'ingreso') meses[clave].ingresos += v;
+        else if (m.tipo === 'gasto') meses[clave].gastos += v;
+        meses[clave].movs.push(m);
+    });
+
+    const claves = Object.keys(meses).sort().reverse();
+    if (!claves.length) {
+        contenedor.innerHTML = '<p style="color:#94a3b8;padding:16px;">Sin movimientos registrados.</p>';
+        return;
+    }
+
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+            <tr style="border-bottom:2px solid var(--border);background:var(--bg2);">
+                <th style="padding:10px 8px;text-align:left;color:var(--text-muted);">Mes</th>
+                <th style="padding:10px 8px;text-align:right;color:var(--ingreso);">Ingresos</th>
+                <th style="padding:10px 8px;text-align:right;color:var(--gasto);">Gastos</th>
+                <th style="padding:10px 8px;text-align:right;color:var(--text-main);">Balance</th>
+                <th style="padding:10px 8px;text-align:center;color:var(--text-muted);">Movs</th>
+                <th style="padding:10px 8px;text-align:center;"></th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    claves.forEach(clave => {
+        const d = meses[clave];
+        const balance = d.ingresos - d.gastos;
+        const [y, m] = clave.split('-').map(Number);
+        const nombreMes = NOMBRES_MESES[m-1] + ' ' + y;
+        const balColor = balance >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
+        const detalleRows = d.movs.sort((a,b)=>a.fecha>b.fecha?-1:1).map(mv => {
+            const rubro = DB.rubros.find(r=>r.id===mv.rubroId);
+            const color = mv.tipo==='ingreso'?'var(--ingreso)':'var(--gasto)';
+            const signo = mv.tipo==='ingreso'?'+':'-';
+            return `<tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:4px 6px;">${mv.fecha}</td>
+                <td style="padding:4px 6px;">${mv.concepto||'-'}</td>
+                <td style="padding:4px 6px;color:var(--text-muted);">${rubro?rubro.nombre:'-'}</td>
+                <td style="padding:4px 6px;text-align:right;color:${color};font-weight:600;">${signo}${fmt(parseFloat(mv.monto)||0)}</td>
+            </tr>`;
+        }).join('');
+
+        html += `<tr style="border-bottom:1px solid var(--border);" id="fila-hist-${clave}">
+            <td style="padding:10px 8px;font-weight:600;">${nombreMes}</td>
+            <td style="padding:10px 8px;text-align:right;color:var(--ingreso);">${fmt(d.ingresos)}</td>
+            <td style="padding:10px 8px;text-align:right;color:var(--gasto);">${fmt(d.gastos)}</td>
+            <td style="padding:10px 8px;text-align:right;font-weight:700;color:${balColor};">${fmt(balance)}</td>
+            <td style="padding:10px 8px;text-align:center;color:var(--text-muted);">${d.movs.length}</td>
+            <td style="padding:10px 8px;text-align:center;">
+                <button onclick="toggleDetalleMes('${clave}')" style="background:var(--primary);color:white;border:none;border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;" id="btn-hist-${clave}">Ver</button>
+            </td>
+        </tr>
+        <tr id="detalle-hist-${clave}" style="display:none;">
+            <td colspan="6" style="padding:0 8px 12px;">
+                <div style="background:var(--bg2);border-radius:6px;padding:10px;margin-top:4px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                        <thead><tr style="border-bottom:1px solid var(--border);">
+                            <th style="padding:4px 6px;text-align:left;color:var(--text-muted);">Fecha</th>
+                            <th style="padding:4px 6px;text-align:left;color:var(--text-muted);">Concepto</th>
+                            <th style="padding:4px 6px;text-align:left;color:var(--text-muted);">Rubro</th>
+                            <th style="padding:4px 6px;text-align:right;color:var(--text-muted);">Monto</th>
+                        </tr></thead>
+                        <tbody>${detalleRows}</tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>`;
+    });
+
+    html += '</tbody></table>';
+    contenedor.innerHTML = html;
+}
+
+function toggleDetalleMes(clave) {
+    const fila = document.getElementById('detalle-hist-' + clave);
+    const btn  = document.getElementById('btn-hist-' + clave);
+    if (!fila) return;
+    const visible = fila.style.display !== 'none';
+    fila.style.display = visible ? 'none' : 'table-row';
+    if (btn) btn.textContent = visible ? 'Ver' : 'Cerrar';
+}
+
 function initTabs() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
