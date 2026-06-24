@@ -55,7 +55,7 @@
         #splash {
             position: fixed; inset: 0; background: var(--primary);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 9999; gap: 12px; transition: opacity .4s ease;
+            z-index: 9999; gap: 12px; transition: opacity .3s ease;
         }
         #splash.fade-out { opacity: 0; pointer-events: none; }
         .splash-logo { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -1px; }
@@ -640,14 +640,7 @@ function showConfirm(title, body, confirmLabel = 'Confirmar', danger = true) {
         document.getElementById('modal-overlay').classList.add('active');
     });
 }
-document.getElementById('modal-confirm').addEventListener('click', () => {
-    document.getElementById('modal-overlay').classList.remove('active');
-    if (_modalResolve) { _modalResolve(true); _modalResolve = null; }
-});
-document.getElementById('modal-cancel').addEventListener('click', () => {
-    document.getElementById('modal-overlay').classList.remove('active');
-    if (_modalResolve) { _modalResolve(false); _modalResolve = null; }
-});
+// Los listeners del modal se registran dentro de DOMContentLoaded (ver init)
 
 // ════════════════════════════════════════════════════
 //  PERSISTENCIA
@@ -1392,6 +1385,16 @@ window.addEventListener('DOMContentLoaded', function() {
     document.getElementById('mov-fecha').value   = hoyISO();
 
     // Eventos
+    // Modal
+    document.getElementById('modal-confirm').addEventListener('click', () => {
+        document.getElementById('modal-overlay').classList.remove('active');
+        if (_modalResolve) { _modalResolve(true); _modalResolve = null; }
+    });
+    document.getElementById('modal-cancel').addEventListener('click', () => {
+        document.getElementById('modal-overlay').classList.remove('active');
+        if (_modalResolve) { _modalResolve(false); _modalResolve = null; }
+    });
+
     initTabs();
     initMesesVisor();
 
@@ -1415,12 +1418,10 @@ window.addEventListener('DOMContentLoaded', function() {
 
     render();
 
-    // Ocultar splash
-    setTimeout(() => {
-        const splash = document.getElementById('splash');
-        splash.classList.add('fade-out');
-        setTimeout(() => splash.remove(), 400);
-    }, 700);
+    // Ocultar splash apenas termina el render (solo la transición CSS de 300ms)
+    const splash = document.getElementById('splash');
+    splash.classList.add('fade-out');
+    setTimeout(() => splash.remove(), 300);
 });
 </script>
 </body>
