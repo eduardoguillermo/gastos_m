@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.24 · Ledger Edition</div>
+    <div class="splash-version">v13.25 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -447,6 +447,7 @@
                         <div class="form-group">
                             <label for="mov-rubro">Rubro / categoría</label>
                             <select id="mov-rubro"></select>
+                            <div id="rubros-rapidos" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;"></div>
                         </div>
                         <div class="form-group">
                             <label for="mov-origen">Cuenta impactada</label>
@@ -466,6 +467,10 @@
                         </div>
                     </div>
 
+                    <div class="form-group">
+                        <label for="mov-notas">Notas <span style="font-weight:400;color:var(--text-muted);font-size:10px;">(opcional)</span></label>
+                        <input type="text" id="mov-notas" autocomplete="off" placeholder="Detalle adicional...">
+                    </div>
                     <button id="btn-guardar-movimiento" class="btn-primary btn-block" style="margin-top:8px;">
                         ✓ Asentar registro
                     </button>
@@ -576,6 +581,13 @@
         <!-- PANEL DERECHO: REPORTE MENSUAL -->
         <div class="panel">
             <span class="panel-title">📈 Presupuesto vs gastos</span>
+            <!-- Top 5 rubros -->
+            <div style="padding:10px 12px 0;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">🏆 Top gastos del mes</div>
+            <div id="top5-rubros" style="padding:8px 12px;border-bottom:1px solid var(--border);"></div>
+            <!-- Botón recurrentes -->
+            <div style="padding:8px 12px;border-bottom:1px solid var(--border);">
+                <button onclick="gmVerRecurrentes()" class="btn-secondary btn-block" style="font-size:12px;">🔁 Movimientos recurrentes</button>
+            </div>
             <div class="scroll-list" id="lista-reporte-mensual"></div>
         </div>
     </div>
@@ -608,7 +620,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.24';
+const APP_VERSION = '13.25';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1073,6 +1085,42 @@ function fmt(v) {
 // ════════════════════════════════════════════════════
 //  HISTORIAL MENSUAL
 // ════════════════════════════════════════════════════
+function gmExportarHistorialXLSX() {
+    const fTipo    = document.getElementById('hist-f-tipo')?.value || '';
+    const fRubroId = parseInt(document.getElementById('hist-f-rubro')?.value) || 0;
+    const fMontoMin= parseFloat(document.getElementById('hist-f-monto-min')?.value) || 0;
+    const fMontoMax= parseFloat(document.getElementById('hist-f-monto-max')?.value) || Infinity;
+    const fTexto   = (document.getElementById('hist-f-texto')?.value || '').toLowerCase().trim();
+
+    const movsFiltrados = DB.movimientos.filter(m => {
+        if (!m.fecha) return false;
+        if (fTipo && m.tipo !== fTipo) return false;
+        if (fRubroId && m.rubroId !== fRubroId) return false;
+        const monto = parseFloat(m.monto)||0;
+        if (monto < fMontoMin || monto > fMontoMax) return false;
+        if (fTexto && !(m.concepto||'').toLowerCase().includes(fTexto)) return false;
+        return true;
+    });
+
+    const rows = [['Fecha','Concepto','Tipo','Rubro','Cuenta','Monto','Notas']];
+    movsFiltrados.sort((a,b)=>a.fecha>b.fecha?-1:1).forEach(m => {
+        const rubro = DB.rubros.find(r=>r.id===m.rubroId);
+        const cuenta = DB.cuentas[m.origen] || m.origen || '-';
+        rows.push([
+            m.fecha, m.concepto, m.tipo||'-',
+            rubro?rubro.nombre:'-', cuenta,
+            parseFloat(m.monto)||0, m.notas||''
+        ]);
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:12},{wch:30},{wch:10},{wch:18},{wch:15},{wch:12},{wch:25}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Historial');
+    XLSX.writeFile(wb, 'historial_gastos_' + hoyISO() + '.xlsx');
+    toast('✅ Excel exportado', 'success');
+}
+
 function gmAbrirHistorial() {
     document.getElementById('modal-gm-historial')?.remove();
     // Construir opciones de rubros
@@ -1084,7 +1132,10 @@ function gmAbrirHistorial() {
     <div style="background:var(--bg-card,white);border-bottom:2px solid var(--border);flex-shrink:0;">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px 10px;">
             <h2 style="margin:0;font-size:18px;color:var(--text-main);">📅 Historial mensual</h2>
-            <button onclick="document.getElementById('modal-gm-historial').remove()" style="background:#f1f5f9;color:#334155;border:none;border-radius:6px;padding:6px 16px;font-size:13px;cursor:pointer;font-weight:600;">✕ Cerrar</button>
+            <div style="display:flex;gap:8px;">
+                <button onclick="gmExportarHistorialXLSX()" style="background:#15803d;color:white;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;">📊 Exportar Excel</button>
+                <button onclick="document.getElementById('modal-gm-historial').remove()" style="background:#f1f5f9;color:#334155;border:none;border-radius:6px;padding:6px 16px;font-size:13px;cursor:pointer;font-weight:600;">✕ Cerrar</button>
+            </div>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 14px;align-items:center;">
             <select id="hist-f-tipo" onchange="renderHistorial()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:white;">
@@ -1327,27 +1378,48 @@ function guardarMovimiento() {
         const rubroId = parseInt(document.getElementById('mov-rubro').value);
         const origen  = document.getElementById('mov-origen').value;
         if (isNaN(rubroId)) { toast('Seleccioná un rubro.', 'error'); return; }
+        const notas = (document.getElementById('mov-notas')?.value||'').trim();
         DB.movimientos.push({
             id: DB.nid++, concepto: conceptoEl.value.trim(),
-            monto, rubroId, origen, destino: null, fecha
+            monto, rubroId, origen, destino: null, fecha,
+            notas: notas || undefined
         });
     }
 
     conceptoEl.value = '';
     montoEl.value    = '';
+    const notasEl = document.getElementById('mov-notas'); if(notasEl) notasEl.value = '';
     // Mantener fecha para carga rápida de múltiples asientos
 
     const btn = document.getElementById('btn-guardar-movimiento');
-    btn.textContent = '✓ Guardado';
-    btn.style.background = 'var(--ingreso)';
-    setTimeout(() => {
+    const editId = btn.dataset.editId ? parseInt(btn.dataset.editId) : null;
+    if (editId) {
+        // Modo edición: actualizar movimiento existente
+        const idx = DB.movimientos.findIndex(m=>m.id===editId);
+        if (idx !== -1) {
+            const notas2 = (document.getElementById('mov-notas')?.value||'').trim();
+            DB.movimientos[idx] = Object.assign({}, DB.movimientos[idx], {
+                concepto: conceptoEl.value.trim(), monto, fecha,
+                notas: notas2 || undefined
+            });
+            if (flujo !== 'transferencia') {
+                DB.movimientos[idx].rubroId = parseInt(document.getElementById('mov-rubro').value);
+                DB.movimientos[idx].origen  = document.getElementById('mov-origen').value;
+            }
+        }
+        delete btn.dataset.editId;
         btn.textContent = '✓ Asentar registro';
         btn.style.background = '';
-    }, 1000);
-
+        toast('Movimiento actualizado.', 'success');
+    } else {
+        btn.textContent = '✓ Guardado';
+        btn.style.background = 'var(--ingreso)';
+        setTimeout(() => { btn.textContent = '✓ Asentar registro'; btn.style.background = ''; }, 1000);
+    }
     save();
     resetPaginacion();
     render();
+    actualizarRubrosRapidos();
 }
 
 // ════════════════════════════════════════════════════
@@ -1421,6 +1493,164 @@ async function eliminarRubro(id) {
 // ════════════════════════════════════════════════════
 //  ELIMINAR MOVIMIENTO
 // ════════════════════════════════════════════════════
+// ── Editar movimiento ────────────────────────────────────────
+function editarMovimiento(id) {
+    const m = DB.movimientos.find(mv => mv.id === id);
+    if (!m) return;
+    // Llenar el formulario con los datos del movimiento
+    document.getElementById('mov-concepto').value = m.concepto || '';
+    document.getElementById('mov-monto').value    = m.monto || '';
+    document.getElementById('mov-fecha').value    = m.fecha || hoyISO();
+    const notasEl = document.getElementById('mov-notas');
+    if(notasEl) notasEl.value = m.notas || '';
+    if (m.rubroId && document.getElementById('mov-rubro')) {
+        document.getElementById('mov-rubro').value = m.rubroId;
+    }
+    if (m.origen && document.getElementById('mov-origen')) {
+        document.getElementById('mov-origen').value = m.origen;
+    }
+    // Cambiar botón a modo edición
+    const btn = document.getElementById('btn-guardar-movimiento');
+    btn.textContent = '✏️ Actualizar registro';
+    btn.style.background = 'var(--transferencia)';
+    btn.dataset.editId = id;
+    // Scroll al formulario
+    document.getElementById('mov-concepto').scrollIntoView({behavior:'smooth', block:'center'});
+    document.getElementById('mov-concepto').focus();
+}
+
+// ── Rubros rápidos (últimos 5 usados) ────────────────────────
+function actualizarRubrosRapidos() {
+    const el = document.getElementById('rubros-rapidos');
+    if (!el) return;
+    // Obtener últimos rubros usados (por frecuencia reciente)
+    const conteo = {};
+    DB.movimientos.slice().reverse().slice(0, 30).forEach(m => {
+        if (m.rubroId) conteo[m.rubroId] = (conteo[m.rubroId]||0) + 1;
+    });
+    const topRubros = Object.entries(conteo).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([id])=>parseInt(id));
+    el.innerHTML = topRubros.map(id => {
+        const r = DB.rubros.find(rb=>rb.id===id);
+        if(!r) return '';
+        return `<button onclick="document.getElementById('mov-rubro').value=${id}" 
+            style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);cursor:pointer;color:var(--text-main);"
+            title="Seleccionar ${r.nombre}">${r.nombre}</button>`;
+    }).join('');
+}
+
+// ── Top 5 rubros por gasto del mes ───────────────────────────
+function renderTop5Rubros() {
+    const el = document.getElementById('top5-rubros');
+    if (!el) return;
+    const mesActual = claveMesActual;
+    const gastosPorRubro = {};
+    DB.movimientos.filter(m => m.tipo === 'gasto' && claveMesDeISO(m.fecha) === mesActual).forEach(m => {
+        gastosPorRubro[m.rubroId] = (gastosPorRubro[m.rubroId]||0) + (parseFloat(m.monto)||0);
+    });
+    const top = Object.entries(gastosPorRubro).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    if (!top.length) { el.innerHTML = '<p style="font-size:11px;color:var(--text-muted);margin:4px 0;">Sin gastos este mes.</p>'; return; }
+    const max = top[0][1];
+    el.innerHTML = top.map(([rubroId, total]) => {
+        const r = DB.rubros.find(rb=>rb.id==rubroId);
+        const pct = Math.round((total/max)*100);
+        return `<div style="margin-bottom:6px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">
+                <span style="color:var(--text-main);font-weight:600;">${r?r.nombre:'Otros'}</span>
+                <span style="color:var(--gasto);font-weight:700;">${fmt(total)}</span>
+            </div>
+            <div style="background:var(--border);border-radius:3px;height:5px;">
+                <div style="background:var(--gasto);border-radius:3px;height:5px;width:${pct}%;"></div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── Movimientos recurrentes ───────────────────────────────────
+function gmVerRecurrentes() {
+    document.getElementById('modal-gm-recurrentes')?.remove();
+    const ov = document.createElement('div');
+    ov.id = 'modal-gm-recurrentes';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.7);z-index:3000;display:flex;align-items:center;justify-content:center;';
+    const recurrentes = DB.recurrentes || [];
+    const rubrosOpts = DB.rubros.map(r=>`<option value="${r.id}">${r.nombre}</option>`).join('');
+    const cuentasOpts = Object.entries(DB.cuentas).filter(([,v])=>v).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+    const filas = recurrentes.map(r => `
+        <tr>
+            <td style="padding:8px 6px;font-size:13px;">${r.concepto}</td>
+            <td style="padding:8px 6px;font-size:13px;text-align:right;color:var(--${r.tipo});">${fmt(r.monto)}</td>
+            <td style="padding:8px 6px;font-size:12px;color:var(--text-muted);">${DB.rubros.find(rb=>rb.id==r.rubroId)?.nombre||'-'}</td>
+            <td style="padding:8px 6px;font-size:12px;color:var(--text-muted);">Día ${r.dia}</td>
+            <td style="padding:8px 6px;text-align:right;">
+                <button onclick="gmAplicarRecurrente(${r.id})" style="background:var(--primary);color:white;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">+ Aplicar</button>
+                <button onclick="gmBorrarRecurrente(${r.id})" style="background:#dc2626;color:white;border:none;border-radius:4px;padding:3px 6px;font-size:11px;cursor:pointer;">✕</button>
+            </td>
+        </tr>`).join('') || '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text-muted);">Sin movimientos recurrentes.</td></tr>';
+
+    ov.innerHTML = `<div style="background:white;border-radius:10px;padding:24px;min-width:500px;max-width:90vw;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="margin:0;font-size:16px;">🔁 Movimientos recurrentes</h3>
+            <button onclick="document.getElementById('modal-gm-recurrentes').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+            <thead><tr style="border-bottom:2px solid var(--border);">
+                <th style="padding:6px;text-align:left;font-size:12px;color:var(--text-muted);">Concepto</th>
+                <th style="padding:6px;text-align:right;font-size:12px;color:var(--text-muted);">Monto</th>
+                <th style="padding:6px;text-align:left;font-size:12px;color:var(--text-muted);">Rubro</th>
+                <th style="padding:6px;text-align:left;font-size:12px;color:var(--text-muted);">Día</th>
+                <th></th>
+            </tr></thead>
+            <tbody>${filas}</tbody>
+        </table>
+        <hr style="border:none;border-top:1px solid var(--border);margin:12px 0;">
+        <p style="font-size:12px;font-weight:600;margin:0 0 8px;">➕ Nuevo recurrente</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div><label style="font-size:11px;color:var(--text-muted);">Concepto</label><input type="text" id="rec-concepto" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:4px;font-size:12px;box-sizing:border-box;"></div>
+            <div><label style="font-size:11px;color:var(--text-muted);">Monto</label><input type="number" id="rec-monto" step="0.01" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:4px;font-size:12px;box-sizing:border-box;"></div>
+            <div><label style="font-size:11px;color:var(--text-muted);">Tipo</label><select id="rec-tipo" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:4px;font-size:12px;"><option value="gasto">Gasto</option><option value="ingreso">Ingreso</option></select></div>
+            <div><label style="font-size:11px;color:var(--text-muted);">Día del mes</label><input type="number" id="rec-dia" min="1" max="31" value="1" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:4px;font-size:12px;box-sizing:border-box;"></div>
+            <div><label style="font-size:11px;color:var(--text-muted);">Rubro</label><select id="rec-rubro" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:4px;font-size:12px;">${rubrosOpts}</select></div>
+            <div><label style="font-size:11px;color:var(--text-muted);">Cuenta</label><select id="rec-origen" style="width:100%;padding:5px;border:1px solid var(--border);border-radius:4px;font-size:12px;">${cuentasOpts}</select></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <button onclick="gmGuardarRecurrente()" style="background:var(--primary);color:white;border:none;border-radius:4px;padding:7px 16px;font-size:13px;cursor:pointer;">Guardar recurrente</button>
+            <button onclick="document.getElementById('modal-gm-recurrentes').remove()" style="background:#f1f5f9;color:#334155;border:none;border-radius:4px;padding:7px 16px;font-size:13px;cursor:pointer;">Cerrar</button>
+        </div>
+    </div>`;
+    document.body.appendChild(ov);
+}
+function gmGuardarRecurrente() {
+    const concepto = document.getElementById('rec-concepto').value.trim();
+    const monto    = parseFloat(document.getElementById('rec-monto').value);
+    if(!concepto || isNaN(monto) || monto <= 0) { toast('Completá concepto y monto.','error'); return; }
+    if(!DB.recurrentes) DB.recurrentes = [];
+    DB.recurrentes.push({
+        id: Date.now(), concepto, monto,
+        tipo:    document.getElementById('rec-tipo').value,
+        dia:     parseInt(document.getElementById('rec-dia').value)||1,
+        rubroId: parseInt(document.getElementById('rec-rubro').value),
+        origen:  document.getElementById('rec-origen').value
+    });
+    save();
+    gmVerRecurrentes();
+    toast('Recurrente guardado.','success');
+}
+function gmBorrarRecurrente(id) {
+    DB.recurrentes = (DB.recurrentes||[]).filter(r=>r.id!==id);
+    save(); gmVerRecurrentes();
+}
+function gmAplicarRecurrente(id) {
+    const r = (DB.recurrentes||[]).find(rc=>rc.id===id);
+    if(!r) return;
+    DB.movimientos.push({
+        id: DB.nid++, concepto: r.concepto, monto: r.monto,
+        tipo: r.tipo, rubroId: r.rubroId, origen: r.origen,
+        destino: null, fecha: hoyISO(), notas: 'Recurrente'
+    });
+    save(); render();
+    toast('✅ Movimiento aplicado: ' + r.concepto, 'success');
+    document.getElementById('modal-gm-recurrentes')?.remove();
+}
+
 async function eliminarMovimiento(id) {
     const ok = await showConfirm('Eliminar asiento', '¿Remover este movimiento del libro diario?', 'Eliminar');
     if (!ok) return;
@@ -1886,13 +2116,16 @@ function render() {
                         <span class="mov-row-date">${fechaDisplay(m.fecha)}</span>
                         <span class="badge ${tipo === 'transferencia' ? 'transf' : tipo}">${nRubro}</span>
                         ${medio}
+                        ${m.notas ? `<span style="font-size:10px;color:var(--text-muted);font-style:italic;" title="${m.notas}">📝 ${m.notas.length>30?m.notas.slice(0,30)+'…':m.notas}</span>` : ''}
                     </div>
                 </div>
                 <div class="mov-row-right">
                     <span class="mov-amount" style="color:var(--${tipo === 'transferencia' ? 'transferencia' : tipo})">${signo}${fmt(m.monto)}</span>
+                    <button class="btn-icon" data-edit-mov="${m.id}" title="Editar">✏️</button>
                     <button class="btn-icon danger" data-del="${m.id}" title="Eliminar">🗑️</button>
                 </div>`;
             div.querySelector('[data-del]').addEventListener('click', () => eliminarMovimiento(m.id));
+            div.querySelector('[data-edit-mov]')?.addEventListener('click', () => editarMovimiento(m.id));
             listaMov.appendChild(div);
         });
 
@@ -1907,6 +2140,8 @@ function render() {
     }
 
     // ── Reporte mensual ──
+    actualizarRubrosRapidos();
+    renderTop5Rubros();
     const listaReporte = document.getElementById('lista-reporte-mensual');
     listaReporte.innerHTML = '';
     const mesesOrdenados = Object.keys(metricas.mapaMensual).sort().reverse();
