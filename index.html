@@ -345,14 +345,16 @@
             #contenedor-impresion-pwa { display: block !important; padding: 20px; }
         }
     </style>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.26 · Ledger Edition</div>
+    <div class="splash-version">v13.27 · Ledger Edition</div>
     <div class="splash-spinner"></div>
+    <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:16px;color:rgba(147,197,253,0.75);pointer-events:none">Development by Guille</div>
 </div>
 
 <!-- TOASTS -->
@@ -377,6 +379,9 @@
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
             <span class="hdr-version" id="hdr-version">${APP_VERSION}</span>
+        </div>
+        <div style="position:absolute;left:75%;transform:translateX(-50%);pointer-events:none;top:50%;transform:translate(-50%,-50%)">
+            <span style="font-family:'Dancing Script',cursive;font-size:15px;color:#93c5fd;opacity:0.75;letter-spacing:0.3px;white-space:nowrap">Development by Guille</span>
         </div>
 
         <div class="balance-strip">
@@ -2331,10 +2336,10 @@ window.addEventListener('DOMContentLoaded', function() {
             splash.classList.add('fade-out');
             setTimeout(() => splash.remove(), 320);
         }));
-    }, 600);
+    }, 5000);
 
     // Restaurar carpeta DESPUÉS de cerrar splash para no interferir
-    setTimeout(() => restaurarCarpetaGuardada(), 700);
+    setTimeout(() => restaurarCarpetaGuardada(), 5100);
 
     // Versión dinámica en header
     const hdrV = document.getElementById('hdr-version');
