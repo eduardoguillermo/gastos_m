@@ -1,5 +1,5 @@
 // FinanzasPro Ledger · Service Worker v13.26
-const CACHE_NAME = 'finanzas-pro-v13.26';
+const CACHE_NAME = 'finanzas-pro-v13.27';
 const ASSETS = ['./index.html', './manifest.json'];
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(CACHE_NAME).then(cache => Promise.all(ASSETS.map(asset => fetch(`${asset}?v=${Date.now()}`, { cache: 'no-store' }).then(res => { if (res.ok) cache.put(asset, res); }).catch(() => {}))))); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
