@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.13 · Ledger Edition</div>
+    <div class="splash-version">v13.14 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -376,7 +376,7 @@
     <header>
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
-            <span class="hdr-version" id="hdr-version">v13.13</span>
+            <span class="hdr-version" id="hdr-version">v13.14</span>
         </div>
 
         <div class="balance-strip">
@@ -590,7 +590,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.13';
+const APP_VERSION = '13.14';
 const SKEY        = 'finanzas-pro-v13';
 const LEGACY_KEYS = [
     'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
@@ -1087,13 +1087,17 @@ async function restaurarCarpetaGuardada() {
         if (perm === 'granted') {
             _dirHandle = handle;
             actualizarEstadoCarpeta();
-        } else {
-            // Permiso pendiente: mostrar aviso naranja
+        } else if (perm === 'prompt') {
+            // Asignar igual — requestPermission se pedirá en el primer backup
+            _dirHandle = handle;
             const el = document.getElementById('carpeta-status');
-            el.textContent   = `📂 ${handle.name} · click Carpeta para reactivar`;
+            el.textContent   = `📂 ${handle.name} · requiere permiso`;
             el.style.display = 'inline';
             el.style.color   = 'var(--transferencia)';
-            window._pendingHandle = handle;
+            const btn = document.getElementById('btn-carpeta');
+            btn.style.background  = 'var(--transferencia-bg)';
+            btn.style.color       = 'var(--transferencia)';
+            btn.style.borderColor = 'var(--transferencia)';
         }
     } catch(e) { console.warn('restaurarCarpeta:', e); }
 }
@@ -1155,6 +1159,15 @@ function actualizarEstadoCarpeta() {
 async function guardarEnCarpeta() {
     if (!_dirHandle) return false;
     try {
+        // Verificar/solicitar permiso si es necesario
+        const perm = await _dirHandle.queryPermission({ mode: 'readwrite' });
+        if (perm === 'prompt') {
+            const granted = await _dirHandle.requestPermission({ mode: 'readwrite' });
+            if (granted !== 'granted') return false;
+            actualizarEstadoCarpeta(); // actualiza colores a verde
+        } else if (perm !== 'granted') {
+            return false;
+        }
         const hoy    = new Date().toISOString().slice(0,10);
         const nombre = `finanzaspro_backup_${hoy}.json`;
 
