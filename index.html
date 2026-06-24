@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.14 · Ledger Edition</div>
+    <div class="splash-version">v13.15 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -376,7 +376,7 @@
     <header>
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
-            <span class="hdr-version" id="hdr-version">v13.14</span>
+            <span class="hdr-version" id="hdr-version">v13.15</span>
         </div>
 
         <div class="balance-strip">
@@ -590,7 +590,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.14';
+const APP_VERSION = '13.15';
 const SKEY        = 'finanzas-pro-v13';
 const LEGACY_KEYS = [
     'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
@@ -1193,6 +1193,7 @@ async function guardarEnCarpeta() {
         return true;
     } catch(e) {
         console.error('guardarEnCarpeta:', e.name, e.message);
+        toast(`Error backup: ${e.name} - ${e.message}`, 'error', 6000);
         return false;
     }
 }
