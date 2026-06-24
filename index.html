@@ -350,7 +350,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.01 · Ledger Edition</div>
+    <div class="splash-version">v13.02 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -375,7 +375,7 @@
     <header>
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
-            <span class="hdr-version" id="hdr-version">v13.01</span>
+            <span class="hdr-version" id="hdr-version">v13.02</span>
         </div>
 
         <div class="balance-strip">
@@ -583,7 +583,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.01';
+const APP_VERSION = '13.02';
 const SKEY        = 'finanzas-pro-v13';
 const LEGACY_KEYS = [
     'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
@@ -667,8 +667,12 @@ function saveImmediate() {
 function migrar(data) {
     if (!data.version) data.version = 8;
 
+    // Garantizar arrays mínimos siempre
+    data.rubros       = Array.isArray(data.rubros)       ? data.rubros       : [];
+    data.movimientos  = Array.isArray(data.movimientos)  ? data.movimientos  : [];
+    data.presupuestosHistoricos = data.presupuestosHistoricos || {};
+
     if (data.version <= 9) {
-        data.presupuestosHistoricos = data.presupuestosHistoricos || {};
         data.movimientos.forEach(m => {
             if (!m.origen) m.origen = 'efectivo';
             if (m.destino === undefined) m.destino = null;
@@ -676,7 +680,7 @@ function migrar(data) {
         data.version = 10;
     }
     if (data.version <= 12.02) {
-        // Migrar bancos legacy → cuentas
+        // Migrar bancos legacy → cuentas (cualquier versión que traiga bancos)
         if (data.bancos && !data.cuentas) {
             data.cuentas = {
                 efectivo: 'Efectivo',
@@ -690,6 +694,14 @@ function migrar(data) {
         data.movimientos.forEach(m => { m.fecha = normalizarFecha(m.fecha); });
         data.version = 13;
     }
+    // Garantizar estructura cuentas siempre (por si viene de backup raro)
+    if (!data.cuentas || typeof data.cuentas !== 'object') {
+        data.cuentas = { efectivo: 'Efectivo', debito1: 'Banco 1', debito2: 'Banco 2', debito3: '' };
+    }
+    data.cuentas.efectivo = data.cuentas.efectivo || 'Efectivo';
+    data.cuentas.debito1  = data.cuentas.debito1  || 'Banco 1';
+    data.cuentas.debito2  = data.cuentas.debito2  || 'Banco 2';
+    data.cuentas.debito3  = data.cuentas.debito3  || '';
     return data;
 }
 
@@ -992,7 +1004,7 @@ function importarBackup(event) {
     reader.onload = async function() {
         try {
             const parsed = JSON.parse(reader.result);
-            if (!parsed.rubros || !parsed.movimientos) throw new Error('Formato inválido');
+            if (!Array.isArray(parsed.rubros) && !Array.isArray(parsed.movimientos)) throw new Error('No es un backup de FinanzasPro');
             const ok = await showConfirm('Restaurar backup', `Se importarán ${parsed.movimientos.length} movimientos y ${parsed.rubros.length} rubros. Los datos actuales serán reemplazados.`, 'Restaurar', true);
             if (!ok) return;
             DB = migrar(parsed);
@@ -1005,7 +1017,8 @@ function importarBackup(event) {
             saveImmediate(); resetPaginacion(); render();
             toast('Base de datos restaurada.', 'success');
         } catch(e) {
-            toast('Error al importar: archivo inválido.', 'error', 4000);
+            console.error('Import error:', e);
+            toast('Error al importar: ' + (e.message || 'archivo inválido'), 'error', 5000);
         }
         event.target.value = '';
     };
