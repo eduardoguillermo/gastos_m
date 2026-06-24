@@ -350,7 +350,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.02 · Ledger Edition</div>
+    <div class="splash-version">v13.03 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -375,7 +375,7 @@
     <header>
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
-            <span class="hdr-version" id="hdr-version">v13.02</span>
+            <span class="hdr-version" id="hdr-version">v13.03</span>
         </div>
 
         <div class="balance-strip">
@@ -583,7 +583,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.02';
+const APP_VERSION = '13.03';
 const SKEY        = 'finanzas-pro-v13';
 const LEGACY_KEYS = [
     'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
@@ -711,12 +711,19 @@ function migrar(data) {
 /** Convierte cualquier string de fecha a YYYY-MM-DD */
 function normalizarFecha(str) {
     if (!str) return hoyISO();
+    // Ya en formato ISO correcto
     if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-    // DD/MM/YYYY  o  D/M/YYYY  (formato toLocaleDateString argentina)
     const p = str.split(/[\/\-]/);
     if (p.length === 3) {
-        if (p[0].length <= 2) return `${p[2].padStart(4,'0')}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
-        return str; // ya YYYY-...
+        let y = p[0], m = p[1], d = p[2];
+        // DD/MM/YYYY o D/M/YYYY (Argentina: primer parte ≤2 dígitos = día)
+        if (p[0].length <= 2) { y = p[2]; m = p[1]; d = p[0]; }
+        // Año de 2 dígitos → expandir (20 → 2020, 99 → 1999)
+        if (y.length === 2) y = (parseInt(y) <= 30 ? '20' : '19') + y;
+        // Validar que el año sea razonable
+        const yi = parseInt(y);
+        if (yi < 2000 || yi > 2100) return hoyISO();
+        return `${y.padStart(4,'0')}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
     }
     return hoyISO();
 }
@@ -1055,6 +1062,10 @@ function obtenerFiltrados() {
                 const cuenta = fValor.slice(2);
                 if (m.origen !== cuenta && m.destino !== cuenta) return false;
             }
+            if (fValor.startsWith('r-')) {
+                const rubroId = parseInt(fValor.slice(2));
+                if (m.rubroId !== rubroId) return false;
+            }
         }
         // Fechas ISO → comparación directa de strings
         if (desde && m.fecha < desde) return false;
@@ -1143,12 +1154,16 @@ function render() {
     // ── Select filtro avanzado ──
     const filtroEl   = document.getElementById('filtro-avanzado');
     const prevFiltro = filtroEl.value || 'all';
+    const rubrosGasto   = [...DB.rubros].filter(r => r.tipo === 'gasto').sort((a,b) => a.nombre.localeCompare(b.nombre));
+    const rubrosIngreso = [...DB.rubros].filter(r => r.tipo === 'ingreso').sort((a,b) => a.nombre.localeCompare(b.nombre));
     filtroEl.innerHTML = `
         <option value="all">🔍 Todos</option>
         <option value="gasto">🔻 Gastos</option>
         <option value="ingreso">🔺 Ingresos</option>
         <option value="transferencia">⇅ Transferencias</option>
-        ${cuentas.map(c => `<option value="f-${c.key}">${c.icon} ${c.label}</option>`).join('')}
+        ${rubrosGasto.length   ? `<optgroup label="── Rubros gasto">${rubrosGasto.map(r   => `<option value="r-${r.id}">📁 ${r.nombre}</option>`).join('')}</optgroup>` : ''}
+        ${rubrosIngreso.length ? `<optgroup label="── Rubros ingreso">${rubrosIngreso.map(r => `<option value="r-${r.id}">📁 ${r.nombre}</option>`).join('')}</optgroup>` : ''}
+        <optgroup label="── Cuentas">${cuentas.map(c => `<option value="f-${c.key}">${c.icon} ${c.label}</option>`).join('')}</optgroup>
     `;
     filtroEl.value = prevFiltro;
 
@@ -1192,6 +1207,10 @@ function render() {
         const tipo = getTipoMov(m);
         if (fValorActivo === 'gasto' || fValorActivo === 'ingreso') {
             suma += m.monto;
+        } else if (fValorActivo.startsWith('r-')) {
+            // filtro por rubro: suma simple de montos
+            if (tipo === 'ingreso') suma += m.monto;
+            else if (tipo === 'gasto') suma -= m.monto;
         } else if (fValorActivo.startsWith('f-')) {
             const cuenta = fValorActivo.slice(2);
             if (tipo === 'transferencia') {

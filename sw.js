@@ -1,6 +1,6 @@
-// FinanzasPro Ledger · Service Worker v13.02
+// FinanzasPro Ledger · Service Worker v13.03
 // Estrategia: Network-First con fallback a caché para activos propios.
-const CACHE_NAME = 'finanzas-pro-v13.02';
+const CACHE_NAME = 'finanzas-pro-v13.03';
 const ASSETS = ['./index.html', './manifest.json'];
 
 // ── INSTALL: pre-cachear activos críticos ──────────────────────────────────
