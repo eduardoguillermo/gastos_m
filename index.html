@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.18 · Ledger Edition</div>
+    <div class="splash-version">v13.19 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -524,6 +524,17 @@
                     <input type="text" id="cfg-debito3" placeholder="Ej: Brubank">
                 </div>
                 <button id="btn-guardar-bancos" class="btn-secondary btn-block" style="margin-top:2px;">Actualizar nombres</button>
+
+                <hr style="margin:16px 0;border:none;border-top:1px solid var(--border);">
+                <div class="form-group">
+                    <label for="cfg-drive-client-id" style="display:flex;align-items:center;gap:6px;">
+                        ☁️ Google Drive <span style="font-size:10px;color:var(--text-muted);font-weight:400;">(opcional)</span>
+                    </label>
+                    <input type="text" id="cfg-drive-client-id" placeholder="xxxxxx.apps.googleusercontent.com" style="font-size:11px;">
+                    <p style="font-size:10px;color:var(--text-muted);margin:4px 0 8px;">Pegá tu Client ID de Google Cloud Console para habilitar backup en Drive.</p>
+                    <button class="btn-secondary btn-sm" onclick="gmGuardarClientId()">Guardar Client ID</button>
+                    <span id="drive-cfg-status" style="font-size:11px;margin-left:8px;color:var(--text-muted);"></span>
+                </div>
             </div>
 
             <!-- TAB HISTORIAL -->
@@ -585,6 +596,8 @@
             <button class="btn-secondary btn-sm" id="btn-carpeta" onclick="seleccionarCarpetaBackup()" title="Vincular carpeta para backup automático">📂 Carpeta</button>
             <button class="btn-secondary btn-sm" onclick="exportarBackup()">📥 Exportar</button>
             <button class="btn-secondary btn-sm" onclick="document.getElementById('file-import').click()">📤 Importar</button>
+            <button class="btn-secondary btn-sm" id="btn-gm-drive-up" onclick="gmDriveSubir()" title="Subir backup a Drive" style="display:none;background:#4285f4;color:white;border-color:#4285f4;">☁️ Drive</button>
+            <button class="btn-secondary btn-sm" id="btn-gm-drive-down" onclick="gmDriveRestaurar()" title="Restaurar desde Drive" style="display:none;background:#4285f4;color:white;border-color:#4285f4;">📂 Drive</button>
             <button class="btn-secondary btn-sm" onclick="gmMostrarSnapshots()" title="Ver/restaurar snapshots locales" style="background:#0f766e;color:white;border-color:#0f766e;">💾 Local</button>
             <button class="btn-secondary btn-sm" onclick="gmSalir()" title="Guardar y salir" style="background:#334155;color:white;border-color:#334155;">🚪 Salir</button>
             <input type="file" id="file-import" accept=".json" style="display:none" onchange="importarBackup(event)">
@@ -598,7 +611,157 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.18';
+const APP_VERSION = '13.19';
+
+// ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
+const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
+const GM_GTOKEN_KEY     = 'gm_gtoken';
+const GM_GTOKEN_EXP_KEY = 'gm_gtoken_exp';
+const GM_CLIENT_ID_KEY  = 'gm_drive_client_id';
+let gmGToken = null;
+let gmDriveFileId = null;
+
+function gmGetClientId() { return localStorage.getItem(GM_CLIENT_ID_KEY) || ''; }
+function gmGuardarClientId() {
+    const val = document.getElementById('cfg-drive-client-id').value.trim();
+    localStorage.setItem(GM_CLIENT_ID_KEY, val);
+    gmActualizarBotonesDrive();
+    const st = document.getElementById('drive-cfg-status');
+    if(val) { st.textContent = '✅ Guardado'; st.style.color='var(--ingreso)'; }
+    else     { st.textContent = 'Drive desactivado'; st.style.color='var(--text-muted)'; }
+}
+function gmActualizarBotonesDrive() {
+    const tiene = !!gmGetClientId();
+    document.getElementById('btn-gm-drive-up').style.display   = tiene ? '' : 'none';
+    document.getElementById('btn-gm-drive-down').style.display = tiene ? '' : 'none';
+}
+function gmGTokenGuardar(token, expiresIn) {
+    const exp = Date.now() + (expiresIn||3500)*1000;
+    try { localStorage.setItem(GM_GTOKEN_KEY, token); localStorage.setItem(GM_GTOKEN_EXP_KEY, String(exp)); } catch(e){}
+    gmGToken = token;
+}
+function gmGTokenCargarLocal() {
+    try {
+        const t = localStorage.getItem(GM_GTOKEN_KEY);
+        const exp = parseInt(localStorage.getItem(GM_GTOKEN_EXP_KEY)||'0');
+        if(t && exp && Date.now() < exp - 60000) { gmGToken = t; return true; }
+    } catch(e){}
+    return false;
+}
+function gmGTokenLimpiar() {
+    gmGToken = null;
+    try { localStorage.removeItem(GM_GTOKEN_KEY); localStorage.removeItem(GM_GTOKEN_EXP_KEY); } catch(e){}
+}
+function gmCargarGoogle(cb) {
+    if(typeof google !== 'undefined') { cb(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.onload = cb;
+    s.onerror = () => alert('No se pudo cargar Google. Verificá la conexión.');
+    document.head.appendChild(s);
+}
+function gmGetToken(cb) {
+    if(gmGTokenCargarLocal()) { cb(gmGToken); return; }
+    const clientId = gmGetClientId();
+    if(!clientId) { alert('Configurá el Client ID de Drive en la pestaña Cuentas.'); return; }
+    gmCargarGoogle(() => {
+        if(gmGToken) { cb(gmGToken); return; }
+        const client = google.accounts.oauth2.initTokenClient({
+            client_id: clientId, scope: GM_DRIVE_SCOPE, prompt: '',
+            callback: resp => {
+                if(resp.error === 'interaction_required' || resp.error === 'user_logged_out') {
+                    const c2 = google.accounts.oauth2.initTokenClient({
+                        client_id: clientId, scope: GM_DRIVE_SCOPE,
+                        callback: r2 => { if(r2.error){alert('Error: '+r2.error);return;} gmGTokenGuardar(r2.access_token, r2.expires_in); cb(gmGToken); }
+                    });
+                    c2.requestAccessToken(); return;
+                }
+                if(resp.error) { alert('Error Google: ' + resp.error); return; }
+                gmGTokenGuardar(resp.access_token, resp.expires_in);
+                cb(gmGToken);
+            }
+        });
+        client.requestAccessToken({prompt:''});
+    });
+}
+function gmDriveSubir() {
+    gmGetToken(token => {
+        const ahora = new Date();
+        const ts = ahora.toISOString().slice(0,16).replace(/[:T]/g,'-');
+        const nombre = `finanzaspro_backup_${ts}.json`;
+        const data = JSON.stringify(DB, null, 2);
+        const meta = JSON.stringify({name: nombre, parents: ['appDataFolder']});
+        const form = new FormData();
+        form.append('metadata', new Blob([meta], {type:'application/json'}));
+        form.append('file',     new Blob([data], {type:'application/json'}));
+        fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+            {method:'POST', headers:{Authorization:'Bearer '+token}, body:form})
+        .then(r=>r.json())
+        .then(f => { if(f.id) { toast('✅ Backup subido a Drive: '+nombre, 'success'); } else { toast('Error al subir: '+JSON.stringify(f), 'error'); gmGTokenLimpiar(); }})
+        .catch(e => { toast('Error: '+e.message, 'error'); gmGTokenLimpiar(); });
+    });
+}
+function gmDriveRestaurar() {
+    gmGetToken(token => {
+        fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=20',
+            {headers:{Authorization:'Bearer '+token}})
+        .then(r=>r.json())
+        .then(data => {
+            const arch = (data.files||[]).filter(f=>f.name.startsWith('finanzaspro_backup_'));
+            if(!arch.length) { alert('No hay backups en Drive.'); return; }
+            gmMostrarModalDrive(arch, token);
+        })
+        .catch(e => { toast('Error al listar Drive: '+e.message, 'error'); gmGTokenLimpiar(); });
+    });
+}
+function gmMostrarModalDrive(arch, token) {
+    document.getElementById('modal-gm-drive')?.remove();
+    const ov = document.createElement('div');
+    ov.id = 'modal-gm-drive';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.7);z-index:3000;display:flex;align-items:center;justify-content:center;';
+    const rows = arch.map(f => {
+        const fecha = new Date(f.modifiedTime).toLocaleString('es-AR');
+        return `<tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 6px;font-size:12px;">${f.name}</td>
+            <td style="padding:8px 6px;font-size:11px;color:var(--text-muted);">${fecha}</td>
+            <td style="padding:8px 6px;text-align:right;">
+                <button onclick="gmDriveCargarArchivo('${f.id}','${token}')" style="background:#0f766e;color:white;border:none;border-radius:4px;padding:3px 10px;font-size:12px;cursor:pointer;">Restaurar</button>
+            </td>
+        </tr>`;
+    }).join('');
+    ov.innerHTML = `<div style="background:white;border-radius:10px;padding:24px;min-width:400px;max-width:90vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="margin:0;font-size:16px;">☁️ Backups en Drive</h3>
+            <button onclick="document.getElementById('modal-gm-drive').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="border-bottom:2px solid var(--border);">
+                <th style="padding:6px;text-align:left;font-size:12px;color:var(--text-muted);">Archivo</th>
+                <th style="padding:6px;text-align:left;font-size:12px;color:var(--text-muted);">Fecha</th>
+                <th></th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+        <div style="margin-top:16px;text-align:right;">
+            <button onclick="document.getElementById('modal-gm-drive').remove()" style="background:#f1f5f9;color:#334155;border:none;border-radius:4px;padding:6px 14px;font-size:13px;cursor:pointer;">Cerrar</button>
+        </div>
+    </div>`;
+    document.body.appendChild(ov);
+}
+function gmDriveCargarArchivo(id, token) {
+    if(!confirm('¿Restaurar este backup? Los datos actuales se guardarán como snapshot antes.')) return;
+    gmHacerSnapshot(false);
+    fetch('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media', {headers:{Authorization:'Bearer '+token}})
+    .then(r=>r.json())
+    .then(data => {
+        DB = migrar(data);
+        saveImmediate();
+        document.getElementById('modal-gm-drive')?.remove();
+        render();
+        toast('✅ Backup restaurado desde Drive', 'success');
+    })
+    .catch(e => { toast('Error al restaurar: '+e.message, 'error'); });
+}
 
 // ── Snapshots locales ─────────────────────────────────────────────────────
 const GM_BKUP_KEY = 'gm_backups';
@@ -1883,6 +2046,14 @@ window.addEventListener('DOMContentLoaded', function() {
     // Versión dinámica en header
     const hdrV = document.getElementById('hdr-version');
     if(hdrV) hdrV.textContent = APP_VERSION;
+
+    // Drive: cargar Client ID guardado y mostrar botones si existe
+    const savedClientId = gmGetClientId();
+    if(savedClientId) {
+        const el = document.getElementById('cfg-drive-client-id');
+        if(el) el.value = savedClientId;
+    }
+    gmActualizarBotonesDrive();
 
     // Cierre seguro: snapshot local al cerrar con X
     window.addEventListener('beforeunload', () => { gmHacerSnapshot(false); });
