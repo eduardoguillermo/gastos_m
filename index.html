@@ -351,7 +351,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.10 · Ledger Edition</div>
+    <div class="splash-version">v13.11 · Ledger Edition</div>
     <div class="splash-spinner"></div>
 </div>
 
@@ -376,7 +376,7 @@
     <header>
         <div class="hdr-brand">
             <h1>Finanzas<span>Pro</span></h1>
-            <span class="hdr-version" id="hdr-version">v13.10</span>
+            <span class="hdr-version" id="hdr-version">v13.11</span>
         </div>
 
         <div class="balance-strip">
@@ -590,7 +590,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.10';
+const APP_VERSION = '13.11';
 const SKEY        = 'finanzas-pro-v13';
 const LEGACY_KEYS = [
     'finanzas-pro-compact-v12.02','finanzas-pro-compact-v12.01',
@@ -1035,36 +1035,111 @@ function guardarCuentas() {
 // ── File System Access API ─────────────────────────
 let _dirHandle = null; // handle de carpeta vinculada (persiste en sesión)
 
+// IndexedDB para persistir FileSystemDirectoryHandle entre sesiones
+const IDB_NAME  = 'finanzaspro-fs';
+const IDB_STORE = 'handles';
+const IDB_KEY   = 'carpeta-backup';
+
+function abrirIDB() {
+    return new Promise((res, rej) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+        req.onsuccess = e => res(e.target.result);
+        req.onerror   = e => rej(e.target.error);
+    });
+}
+async function guardarHandleIDB(handle) {
+    try {
+        const db = await abrirIDB();
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(handle, IDB_KEY);
+        await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+        db.close();
+    } catch(e) { console.warn('IDB write:', e); }
+}
+async function leerHandleIDB() {
+    try {
+        const db = await abrirIDB();
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const h = await new Promise((res, rej) => {
+            const r = tx.objectStore(IDB_STORE).get(IDB_KEY);
+            r.onsuccess = e => res(e.target.result);
+            r.onerror   = e => rej(e.target.error);
+        });
+        db.close();
+        return h || null;
+    } catch(e) { return null; }
+}
+
+async function restaurarCarpetaGuardada() {
+    if (!('showDirectoryPicker' in window)) return;
+    const handle = await leerHandleIDB();
+    if (!handle) return;
+    try {
+        const perm = await handle.queryPermission({ mode: 'readwrite' });
+        if (perm === 'granted') {
+            _dirHandle = handle;
+            actualizarEstadoCarpeta();
+        } else {
+            // Permiso pendiente: mostrar aviso naranja
+            const el = document.getElementById('carpeta-status');
+            el.textContent   = `📂 ${handle.name} · click Carpeta para reactivar`;
+            el.style.display = 'inline';
+            el.style.color   = 'var(--transferencia)';
+            window._pendingHandle = handle;
+        }
+    } catch(e) { console.warn('restaurarCarpeta:', e); }
+}
+
 async function seleccionarCarpetaBackup() {
     if (!('showDirectoryPicker' in window)) {
         toast('Tu browser no soporta esta función. Usá Chrome o Brave.', 'error', 4000);
         return;
     }
     try {
+        // Reactivar handle pendiente si existe
+        if (window._pendingHandle) {
+            try {
+                const perm = await window._pendingHandle.requestPermission({ mode: 'readwrite' });
+                if (perm === 'granted') {
+                    _dirHandle = window._pendingHandle;
+                    window._pendingHandle = null;
+                    await guardarHandleIDB(_dirHandle);
+                    actualizarEstadoCarpeta();
+                    const ok = await guardarEnCarpeta();
+                    toast(ok ? `✓ Carpeta "${_dirHandle.name}" reactivada.` : `Carpeta reactivada pero sin permiso de escritura.`, ok ? 'success' : 'warning', 3500);
+                    return;
+                }
+            } catch(ep) {}
+            window._pendingHandle = null;
+        }
+        // Seleccionar nueva carpeta
         _dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        await guardarHandleIDB(_dirHandle);
         actualizarEstadoCarpeta();
-        toast(`Carpeta "${_dirHandle.name}" vinculada. Se guardará al cerrar.`, 'success', 3500);
-        // Guardar de inmediato al vincular
-        await guardarEnCarpeta();
+        const ok = await guardarEnCarpeta();
+        toast(ok ? `✓ Carpeta "${_dirHandle.name}" vinculada. Backup guardado.` : `Carpeta vinculada pero no se pudo escribir. Verificá permisos.`, ok ? 'success' : 'warning', 4000);
     } catch(e) {
-        if (e.name !== 'AbortError') toast('No se pudo acceder a la carpeta.', 'error');
+        console.error('seleccionarCarpetaBackup:', e.name, e.message);
+        if (e.name !== 'AbortError') toast(`Error: ${e.message || 'no se pudo acceder a la carpeta'}`, 'error', 5000);
     }
 }
 
 function actualizarEstadoCarpeta() {
-    const el = document.getElementById('carpeta-status');
+    const el  = document.getElementById('carpeta-status');
     const btn = document.getElementById('btn-carpeta');
     if (_dirHandle) {
-        el.textContent = `📂 ${_dirHandle.name}`;
-        el.style.display = 'inline';
-        btn.style.background = 'var(--ingreso-bg)';
-        btn.style.color = 'var(--ingreso)';
+        el.textContent    = `📂 ${_dirHandle.name}`;
+        el.style.display  = 'inline';
+        el.style.color    = 'var(--ingreso)';
+        btn.style.background  = 'var(--ingreso-bg)';
+        btn.style.color       = 'var(--ingreso)';
         btn.style.borderColor = 'var(--ingreso)';
-        btn.title = `Carpeta vinculada: ${_dirHandle.name}. Click para cambiar.`;
+        btn.title = `Carpeta: ${_dirHandle.name} · Click para cambiar`;
     } else {
-        el.style.display = 'none';
-        btn.style.background = '';
-        btn.style.color = '';
+        el.style.display      = 'none';
+        btn.style.background  = '';
+        btn.style.color       = '';
         btn.style.borderColor = '';
         btn.title = 'Vincular carpeta para backup automático';
     }
@@ -1073,25 +1148,22 @@ function actualizarEstadoCarpeta() {
 async function guardarEnCarpeta() {
     if (!_dirHandle) return false;
     try {
-        const ahora = new Date();
-        const sello = ahora.toISOString().slice(0,10); // YYYY-MM-DD
-        const nombre = `finanzaspro_backup_${sello}.json`;
-        const fileHandle = await _dirHandle.getFileHandle(nombre, { create: true });
-        const writable   = await fileHandle.createWritable();
+        const nombre   = `finanzaspro_backup_${new Date().toISOString().slice(0,10)}.json`;
+        const fh       = await _dirHandle.getFileHandle(nombre, { create: true });
+        const writable = await fh.createWritable();
         await writable.write(JSON.stringify(DB, null, 2));
         await writable.close();
+        console.log('Backup guardado:', nombre);
         return true;
     } catch(e) {
-        console.error('Error guardando en carpeta:', e);
+        console.error('guardarEnCarpeta:', e.name, e.message);
         return false;
     }
 }
 
-// Backup automático al cerrar/salir de la página
-window.addEventListener('beforeunload', async (e) => {
-    if (_dirHandle) {
-        guardarEnCarpeta(); // sin await — mejor esfuerzo
-    }
+// Backup automático al cerrar
+window.addEventListener('beforeunload', () => {
+    if (_dirHandle) guardarEnCarpeta();
 });
 
 function exportarBackup() {
