@@ -1,9 +1,7 @@
-// FinanzasPro Ledger · Service Worker v13.16
-// Estrategia: Network-First con fallback a caché para activos propios.
-const CACHE_NAME = 'finanzas-pro-v13.16';
+// FinanzasPro Ledger · Service Worker v13.17
+const CACHE_NAME = 'finanzas-pro-v13.17';
 const ASSETS = ['./index.html', './manifest.json'];
 
-// ── INSTALL: pre-cachear activos críticos ──────────────────────────────────
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
@@ -12,14 +10,13 @@ self.addEventListener('install', (e) => {
         ASSETS.map(asset =>
           fetch(`${asset}?v=${Date.now()}`, { cache: 'no-store' })
             .then(res => { if (res.ok) cache.put(asset, res); })
-            .catch(() => {}) // no bloquear install si un asset falla
+            .catch(() => {})
         )
       )
     )
   );
 });
 
-// ── ACTIVATE: limpiar cachés obsoletos ────────────────────────────────────
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
@@ -30,32 +27,21 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// ── FETCH: Network-First para activos propios, Network-Only para externos ──
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
-
   const url = new URL(e.request.url);
   const esPropio = url.origin === self.location.origin;
-
   if (!esPropio) {
-    // Recursos externos (CDN, APIs, Unsplash): directo a red sin caché
     e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
     return;
   }
-
-  // Activos propios: Network-First con timestamp para evadir caché HTTP
   const urlBustada = new URL(e.request.url);
   urlBustada.searchParams.set('_sw', Date.now());
-
   const req = new Request(urlBustada.toString(), {
-    method:      'GET',
-    headers:     e.request.headers,
-    mode:        e.request.mode === 'navigate' ? 'same-origin' : e.request.mode,
-    credentials: e.request.credentials,
-    redirect:    e.request.redirect,
-    cache:       'no-store'
+    method: 'GET', headers: e.request.headers,
+    mode: e.request.mode === 'navigate' ? 'same-origin' : e.request.mode,
+    credentials: e.request.credentials, redirect: e.request.redirect, cache: 'no-store'
   });
-
   e.respondWith(
     fetch(req)
       .then(res => {
