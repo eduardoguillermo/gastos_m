@@ -1,4 +1,4 @@
-// FinanzasPro Ledger · Service Worker v13.26
+// FinanzasPro Ledger · Service Worker v13.30 · 2026-06-25 00:19 UTC
 const CACHE_NAME = 'finanzas-pro-v13.30';
 const ASSETS = ['./index.html', './manifest.json'];
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(CACHE_NAME).then(cache => Promise.all(ASSETS.map(asset => fetch(`${asset}?v=${Date.now()}`, { cache: 'no-store' }).then(res => { if (res.ok) cache.put(asset, res); }).catch(() => {}))))); });
