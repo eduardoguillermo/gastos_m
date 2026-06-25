@@ -358,7 +358,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.32 · Ledger Edition</div>
+    <div class="splash-version">v13.33 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:16px;color:#1e40af;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -631,7 +631,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.32';
+const APP_VERSION = '13.33';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -2337,11 +2337,11 @@ window.addEventListener('DOMContentLoaded', function() {
 
     // Splash: cierre independiente — no depende de async (restaurarCarpetaGuardada)
     const splash = document.getElementById('splash');
-    // Arrancar barra de progreso
-    requestAnimationFrame(() => requestAnimationFrame(() => {
+    // Arrancar barra de progreso con pequeño delay para que la transición CSS dispare
+    setTimeout(() => {
         const bar = document.getElementById('splash-bar');
         if (bar) bar.style.width = '100%';
-    }));
+    }, 50);
     setTimeout(() => {
         requestAnimationFrame(() => requestAnimationFrame(() => {
             splash.classList.add('fade-out');
