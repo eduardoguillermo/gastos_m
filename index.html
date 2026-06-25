@@ -62,12 +62,12 @@
         #splash.fade-out { opacity: 0; pointer-events: none; }
         .splash-progress-track {
             position: absolute; bottom: 0; left: 0; right: 0;
-            height: 3px; background: rgba(255,255,255,0.15);
+            height: 8px; background: rgba(255,255,255,0.12);
         }
         .splash-progress-bar {
             height: 100%; width: 0%;
-            background: linear-gradient(90deg, #93c5fd, #60a5fa);
-            border-radius: 0 2px 2px 0;
+            background: linear-gradient(90deg, #1d4ed8, #3b82f6, #60a5fa);
+            box-shadow: 0 0 10px rgba(59,130,246,0.8);
             transition: width 5s linear;
         }
         .splash-logo { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -1px; }
@@ -358,7 +358,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.33 · Ledger Edition</div>
+    <div class="splash-version">v13.34 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:16px;color:#1e40af;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -631,7 +631,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.33';
+const APP_VERSION = '13.34';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
