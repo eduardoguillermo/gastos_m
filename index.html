@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.55 · Ledger Edition</div>
+    <div class="splash-version">v13.56 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -642,7 +642,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.55';
+const APP_VERSION = '13.56';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1420,15 +1420,64 @@ function gmRenderServicios() {
     });
 }
 
+
+function gmModalPago(nombre, monto, onConfirm) {
+    var ex = document.getElementById('modal-medio-pago');
+    if (ex) ex.remove();
+    var cuentas = getCuentas();
+    var optsHtml = cuentas.map(function(c) {
+        return '<option value="' + c.key + '">' + c.icon + ' ' + c.label + '</option>';
+    }).join('');
+    var rubrosHtml = '<option value="0">Sin rubro</option>' + DB.rubros.filter(function(r){ return r.tipo === 'gasto'; }).map(function(r) {
+        return '<option value="' + r.id + '">' + r.nombre + '</option>';
+    }).join('');
+
+    var ov = document.createElement('div');
+    ov.id = 'modal-medio-pago';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:3200;display:flex;align-items:center;justify-content:center;padding:16px;';
+    ov.innerHTML = '<div style="background:var(--bg-card);border-radius:14px;width:100%;max-width:340px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'
+        + '<div style="padding:14px 16px;border-bottom:1px solid var(--border);">'
+        + '<div style="font-weight:700;font-size:15px;color:var(--text-main);">💳 Registrar pago</div>'
+        + '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + nombre + ' · ' + fmt(monto) + '</div>'
+        + '</div>'
+        + '<div style="padding:16px;">'
+        + '<div style="margin-bottom:10px;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Medio de pago</label>'
+        + '<select id="pago-cuenta" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;">' + optsHtml + '</select></div>'
+        + '<div style="margin-bottom:10px;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Rubro (opcional)</label>'
+        + '<select id="pago-rubro" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;">' + rubrosHtml + '</select></div>'
+        + '<div style="margin-bottom:14px;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Fecha</label>'
+        + '<input id="pago-fecha" type="date" value="' + hoyISO() + '" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;box-sizing:border-box;"></div>'
+        + '<div style="display:flex;gap:8px;">'
+        + '<button id="btn-cancelar-pago" style="flex:1;padding:8px;background:var(--bg-subtle);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer;">Cancelar</button>'
+        + '<button id="btn-confirmar-pago" style="flex:2;padding:8px;background:var(--ingreso);color:white;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">✓ Confirmar pago</button>'
+        + '</div></div></div>';
+
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+    document.getElementById('btn-cancelar-pago').addEventListener('click', function(){ ov.remove(); });
+    document.getElementById('btn-confirmar-pago').addEventListener('click', function() {
+        var cuenta  = document.getElementById('pago-cuenta').value;
+        var rubroId = parseInt(document.getElementById('pago-rubro').value) || 0;
+        var fecha   = document.getElementById('pago-fecha').value || hoyISO();
+        ov.remove();
+        onConfirm(cuenta, rubroId, fecha);
+    });
+}
+
 function gmPagarServicio(id) {
     var s = DB.fijos.servicios.find(function(x){ return x.id===id; });
     if (!s) return;
-    if (!s.pagos) s.pagos = {};
-    var mes = hoyISO().slice(0,7);
-    s.pagos[mes] = hoyISO();
-    save();
-    gmRenderServicios();
-    toast('✅ ' + s.nombre + ' marcado como pagado', 'success');
+    gmModalPago(s.nombre, s.monto, function(cuenta, rubroId, fecha) {
+        if (!s.pagos) s.pagos = {};
+        var mes = fecha.slice(0,7);
+        s.pagos[mes] = fecha;
+        // Registrar movimiento en libro diario
+        DB.movimientos.push({ id: DB.nid++, concepto: s.nombre, monto: s.monto, rubroId: rubroId, origen: cuenta, destino: null, fecha: fecha });
+        save();
+        render();
+        gmRenderServicios();
+        toast('✅ ' + s.nombre + ' pagado y registrado', 'success');
+    });
 }
 
 async function gmEliminarServicio(id) {
@@ -1544,14 +1593,20 @@ function gmRenderCuotas() {
 function gmPagarCuota(id) {
     var c = DB.fijos.cuotas.find(function(x){ return x.id===id; });
     if (!c) return;
-    if (!c.pagos) c.pagos = {};
-    var mes = hoyISO().slice(0,7);
-    c.pagos[mes] = hoyISO();
-    c.cuotaActual++;
-    save();
-    gmRenderCuotas();
-    toast('✅ Cuota ' + (c.cuotaActual-1) + '/' + c.cuotasTotal + ' pagada', 'success');
-    if (c.cuotaActual > c.cuotasTotal) toast('🎉 ' + c.nombre + ' ¡terminada!', 'success');
+    var numCuota = c.cuotaActual;
+    gmModalPago(c.nombre + ' (' + numCuota + '/' + c.cuotasTotal + ')', c.monto, function(cuenta, rubroId, fecha) {
+        if (!c.pagos) c.pagos = {};
+        var mes = fecha.slice(0,7);
+        c.pagos[mes] = fecha;
+        c.cuotaActual++;
+        // Registrar movimiento en libro diario
+        DB.movimientos.push({ id: DB.nid++, concepto: c.nombre + ' cuota ' + numCuota + '/' + c.cuotasTotal, monto: c.monto, rubroId: rubroId, origen: cuenta, destino: null, fecha: fecha });
+        save();
+        render();
+        gmRenderCuotas();
+        toast('✅ Cuota ' + numCuota + '/' + c.cuotasTotal + ' pagada y registrada', 'success');
+        if (c.cuotaActual > c.cuotasTotal) toast('🎉 ' + c.nombre + ' ¡terminada!', 'success');
+    });
 }
 
 async function gmEliminarCuota(id) {
