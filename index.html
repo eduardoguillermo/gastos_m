@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.48 · Ledger Edition</div>
+    <div class="splash-version">v13.49 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -684,7 +684,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.48';
+const APP_VERSION = '13.49';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1332,7 +1332,11 @@ function gmTortaTab(tab) {
 //  AHORROS
 // ════════════════════════════════════════════════════
 
+let _ahToggleLock = false;
 function gmToggleAhorros() {
+    if (_ahToggleLock) return;
+    _ahToggleLock = true;
+    setTimeout(() => { _ahToggleLock = false; }, 300);
     const hdr     = document.getElementById('ahorros-header');
     const body    = document.getElementById('ahorros-body');
     const chevron = document.getElementById('ahorros-chevron');
