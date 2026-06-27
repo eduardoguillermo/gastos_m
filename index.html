@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.45 · Ledger Edition</div>
+    <div class="splash-version">v13.46 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -606,7 +606,7 @@
 
     <!-- PANEL AHORROS COLAPSABLE -->
     <div id="panel-ahorros" style="margin:8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card);box-shadow:var(--shadow-sm);overflow:hidden;">
-        <div id="ahorros-header" onclick="gmToggleAhorros()" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;user-select:none;background:var(--bg-card);">
+        <div id="ahorros-header" data-open="0" onclick="gmToggleAhorros()" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;user-select:none;background:var(--bg-card);">
             <div style="display:flex;align-items:center;gap:10px;">
                 <span style="font-size:15px;">💰</span>
                 <span style="font-weight:700;font-size:13px;color:var(--text-main);">Ahorros</span>
@@ -684,7 +684,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.45';
+const APP_VERSION = '13.46';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1333,9 +1333,11 @@ function gmTortaTab(tab) {
 // ════════════════════════════════════════════════════
 
 function gmToggleAhorros() {
+    const hdr     = document.getElementById('ahorros-header');
     const body    = document.getElementById('ahorros-body');
     const chevron = document.getElementById('ahorros-chevron');
-    const abierto = body.offsetHeight > 0 || body.style.display === 'block';
+    const abierto = hdr.dataset.open === '1';
+    hdr.dataset.open        = abierto ? '0' : '1';
     body.style.display      = abierto ? 'none' : 'block';
     chevron.style.transform = abierto ? '' : 'rotate(180deg)';
     if (!abierto) gmRenderAhorros();
