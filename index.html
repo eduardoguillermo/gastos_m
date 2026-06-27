@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.53 · Ledger Edition</div>
+    <div class="splash-version">v13.54 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -635,7 +635,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.53';
+const APP_VERSION = '13.54';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1187,14 +1187,17 @@ function gmAbrirTortas() {
     ];
 
     // ── SVG de torta ─────────────────────────────────────────────────────
+    // Almacén de datos para detalle de torta
+    const _pieData = {};
+
     function buildPie(data, titulo, movsPorRubro) {
         const total = data.reduce((s, d) => s + d[1], 0);
-        if (!total) return `
-            <div style="text-align:center;padding:16px 0;">
-                <p style="color:var(--text-muted);font-size:13px;margin:0;">Sin gastos</p>
-            </div>`;
+        if (!total) return '<div style="text-align:center;padding:16px 0;"><p style="color:var(--text-muted);font-size:13px;margin:0;">Sin gastos</p></div>';
 
         const pieId = 'pie-' + Math.random().toString(36).slice(2,7);
+        // Guardar datos para uso posterior desde addEventListener
+        _pieData[pieId] = { data, movsPorRubro: movsPorRubro || null };
+
         let paths = '', cx = 100, cy = 90, r = 75, startAngle = -Math.PI/2;
         data.forEach(([nombre, val], i) => {
             const pct = val / total;
@@ -1205,79 +1208,73 @@ function gmAbrirTortas() {
             const y2 = cy + r * Math.sin(endAngle);
             const largeArc = pct > 0.5 ? 1 : 0;
             const color = PALETA[i % PALETA.length];
-            const clickable = movsPorRubro ? ` style="cursor:pointer;" data-idx="${i}"` : '';
-            paths += `<path${clickable} d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${color}" stroke="var(--bg-card)" stroke-width="1.5"/>`;
+            const cur = movsPorRubro ? ' style="cursor:pointer;"' : '';
+            paths += `<path${cur} data-pie="${pieId}" data-idx="${i}" d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${largeArc},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${color}" stroke="var(--bg-card)" stroke-width="2"/>`;
             startAngle = endAngle;
         });
 
-        // Leyenda
         const leyenda = data.map(([nombre, val], i) => {
             const pct = ((val / total) * 100).toFixed(1);
-            const clickable = movsPorRubro ? ` style="cursor:pointer;" data-idx="${i}"` : '';
-            return `<div${clickable} class="pie-leyenda-item" style="display:flex;align-items:center;gap:6px;margin-bottom:5px;padding:4px 6px;border-radius:6px;">
+            const cur = movsPorRubro ? 'cursor:pointer;' : '';
+            return `<div data-pie="${pieId}" data-idx="${i}" class="pie-ley" style="${cur}display:flex;align-items:center;gap:6px;margin-bottom:5px;padding:4px 6px;border-radius:6px;">
                 <div style="width:10px;height:10px;border-radius:2px;background:${PALETA[i % PALETA.length]};flex-shrink:0;"></div>
                 <div style="flex:1;min-width:0;">
                     <span style="font-size:11px;font-weight:600;color:var(--text-main);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${nombre}</span>
                     <span style="font-size:10px;color:var(--text-muted);">${fmt(val)} · ${pct}%</span>
                 </div>
-                ${movsPorRubro ? '<span style="font-size:11px;color:var(--text-muted);">▶</span>' : ''}
+                ${movsPorRubro ? '<span style="font-size:10px;color:var(--text-muted);">▶</span>' : ''}
             </div>`;
         }).join('');
 
-        return `
-        <div id="${pieId}">
-            <svg viewBox="0 0 200 180" width="100%" style="max-height:180px;">
-                ${paths}
-            </svg>
+        return `<div id="${pieId}">
+            <svg viewBox="0 0 200 180" width="100%" style="max-height:180px;">${paths}</svg>
             <div style="font-size:11px;color:var(--text-muted);text-align:center;margin:-4px 0 10px;">Total: <strong style="color:var(--gasto);">${fmt(total)}</strong></div>
-            <div style="max-height:none;overflow-y:auto;padding-right:2px;">${leyenda}</div>
-            <div id="${pieId}-detalle" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;"></div>
-        </div>
-        <script>
-        (function(){
-            var el = document.getElementById('${pieId}');
-            if (!el) return;
-            var movs = ${movsPorRubro ? JSON.stringify(movsPorRubro) : 'null'};
-            var data = ${JSON.stringify(data)};
-            var paleta = ${JSON.stringify(PALETA)};
-            var detalle = document.getElementById('${pieId}-detalle');
-            var selIdx = null;
-            function showDetalle(idx) {
-                if (!movs || !movs[data[idx][0]]) { detalle.style.display='none'; return; }
-                var nombre = data[idx][0];
-                var color = paleta[idx % paleta.length];
-                var lista = movs[nombre].sort(function(a,b){ return b.fecha>a.fecha?1:-1; });
-                var rows = lista.map(function(m){
-                    return '<tr style="border-bottom:1px solid var(--border);">'
-                        +'<td style="padding:5px 6px;font-size:11px;color:var(--text-muted);">'+m.fecha+'</td>'
-                        +'<td style="padding:5px 6px;font-size:11px;">'+( m.concepto||'-')+'</td>'
-                        +'<td style="padding:5px 6px;font-size:11px;text-align:right;font-weight:700;color:var(--gasto);">'+m.montoFmt+'</td>'
-                        +'</tr>';
-                }).join('');
-                detalle.innerHTML = '<div style="font-size:11px;font-weight:700;color:'+color+';margin-bottom:6px;">'+nombre+'</div>'
-                    +'<table style="width:100%;border-collapse:collapse;">'
-                    +'<thead><tr style="border-bottom:1px solid var(--border);">'
-                    +'<th style="padding:4px 6px;font-size:10px;color:var(--text-muted);text-align:left;">Fecha</th>'
-                    +'<th style="padding:4px 6px;font-size:10px;color:var(--text-muted);text-align:left;">Concepto</th>'
-                    +'<th style="padding:4px 6px;font-size:10px;color:var(--text-muted);text-align:right;">Monto</th>'
-                    +'</tr></thead><tbody>'+rows+'</tbody></table>';
-                detalle.style.display = 'block';
-            }
-            el.addEventListener('click', function(e){
-                var t = e.target.closest('[data-idx]');
-                if (!t) return;
-                var idx = parseInt(t.dataset.idx);
-                // resaltar leyenda seleccionada
-                el.querySelectorAll('.pie-leyenda-item').forEach(function(item,i){
-                    item.style.background = i===idx ? 'var(--primary-light)' : '';
-                });
-                if (selIdx === idx) { detalle.style.display='none'; selIdx=null; return; }
-                selIdx = idx;
-                showDetalle(idx);
-            });
-        })();
-        <\/script>`;
+            <div>${leyenda}</div>
+            <div id="${pieId}-det" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;"></div>
+        </div>`;
     }
+
+    function gmPieClick(pieId, idx) {
+        const pd = _pieData[pieId];
+        if (!pd || !pd.movsPorRubro) return;
+        const det = document.getElementById(pieId + '-det');
+        if (!det) return;
+        // Toggle
+        if (det.dataset.open === String(idx)) {
+            det.style.display = 'none';
+            det.dataset.open = '';
+            document.querySelectorAll('[data-pie="' + pieId + '"].pie-ley').forEach(el => el.style.background = '');
+            return;
+        }
+        det.dataset.open = String(idx);
+        // Resaltar leyenda
+        document.querySelectorAll('[data-pie="' + pieId + '"].pie-ley').forEach((el, i) => {
+            el.style.background = i === idx ? 'var(--primary-light)' : '';
+        });
+        // Resaltar path
+        document.querySelectorAll('[data-pie="' + pieId + '"][data-idx]').forEach((el, i) => {
+            if (el.tagName === 'path') el.style.opacity = i === idx ? '1' : '0.5';
+        });
+        const [nombre, total] = pd.data[idx];
+        const movs = pd.movsPorRubro[nombre] || [];
+        const color = PALETA[idx % PALETA.length];
+        const rows = movs.sort((a,b) => b.fecha > a.fecha ? 1 : -1).map(m =>
+            '<tr style="border-bottom:1px solid var(--border);">'
+            + '<td style="padding:5px 6px;font-size:11px;color:var(--text-muted);">' + m.fecha + '</td>'
+            + '<td style="padding:5px 6px;font-size:11px;">' + (m.concepto || '-') + '</td>'
+            + '<td style="padding:5px 6px;font-size:11px;text-align:right;font-weight:700;color:var(--gasto);">' + m.montoFmt + '</td>'
+            + '</tr>'
+        ).join('');
+        det.innerHTML = '<div style="font-size:12px;font-weight:700;color:' + color + ';margin-bottom:8px;">▼ ' + nombre + ' · ' + fmt(total) + '</div>'
+            + '<table style="width:100%;border-collapse:collapse;">'
+            + '<thead><tr style="border-bottom:1px solid var(--border);">'
+            + '<th style="padding:4px 6px;font-size:10px;color:var(--text-muted);text-align:left;">Fecha</th>'
+            + '<th style="padding:4px 6px;font-size:10px;color:var(--text-muted);text-align:left;">Concepto</th>'
+            + '<th style="padding:4px 6px;font-size:10px;color:var(--text-muted);text-align:right;">Monto</th>'
+            + '</tr></thead><tbody>' + rows + '</tbody></table>';
+        det.style.display = 'block';
+    }
+
 
     // Etiqueta mes actual
     const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -1311,7 +1308,11 @@ function gmAbrirTortas() {
         </div>
     </div>`;
     document.body.appendChild(ov);
-    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    ov.addEventListener('click', e => {
+        if (e.target === ov) { ov.remove(); return; }
+        const t = e.target.closest('[data-pie][data-idx]');
+        if (t) gmPieClick(t.dataset.pie, parseInt(t.dataset.idx));
+    });
 }
 
 function gmTortaTab(tab) {
