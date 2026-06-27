@@ -358,7 +358,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.38 · Ledger Edition</div>
+    <div class="splash-version">v13.39 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -632,7 +632,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.38';
+const APP_VERSION = '13.39';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1217,9 +1217,9 @@ function gmAbrirTortas() {
     // ── Modal ─────────────────────────────────────────────────────────────
     const ov = document.createElement('div');
     ov.id = 'modal-gm-tortas';
-    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:3000;display:flex;align-items:flex-end;justify-content:center;';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px;';
     ov.innerHTML = `
-    <div style="background:var(--bg-card);border-radius:16px 16px 0 0;width:100%;max-width:540px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="background:var(--bg-card);border-radius:14px;width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
             <span style="font-weight:700;font-size:15px;color:var(--text-main);">🥧 Gastos por Rubro</span>
             <button onclick="document.getElementById('modal-gm-tortas').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);padding:0;line-height:1;">×</button>
@@ -1406,6 +1406,20 @@ function renderHistorial() {
         </tr>`;
     });
 
+    // ── Fila de TOTALES ──────────────────────────────────────────────────
+    const totIngr  = claves.reduce((s, k) => s + meses[k].ingresos, 0);
+    const totGast  = claves.reduce((s, k) => s + meses[k].gastos,   0);
+    const totBal   = totIngr - totGast;
+    const totMovs  = claves.reduce((s, k) => s + meses[k].movs.length, 0);
+    const totBalColor = totBal >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
+    html += `<tr style="border-top:2px solid var(--border);background:var(--bg-subtle);">
+        <td style="padding:10px 8px;font-weight:700;color:var(--text-main);">📊 TOTAL (${claves.length} mes${claves.length !== 1 ? 'es' : ''})</td>
+        <td style="padding:10px 8px;text-align:right;color:var(--ingreso);font-weight:700;">${fmt(totIngr)}</td>
+        <td style="padding:10px 8px;text-align:right;color:var(--gasto);font-weight:700;">${fmt(totGast)}</td>
+        <td style="padding:10px 8px;text-align:right;font-weight:700;color:${totBalColor};">${fmt(totBal)}</td>
+        <td style="padding:10px 8px;text-align:center;color:var(--text-muted);font-weight:700;">${totMovs}</td>
+        <td></td>
+    </tr>`;
     html += '</tbody></table>';
     contenedor.innerHTML = html;
 }
