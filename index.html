@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.49 · Ledger Edition</div>
+    <div class="splash-version">v13.50 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -684,7 +684,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.49';
+const APP_VERSION = '13.50';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1398,11 +1398,11 @@ function gmGuardarAhorro() {
     if (isNaN(monto) || monto <= 0) { toast('Ingres\u00e1 un monto v\u00e1lido.', 'error'); return; }
     DB.ahorros.movimientos.push({ id: DB.ahorros.nid++, subrubroId, tipo, monto, concepto, fecha });
     save();
-    gmRenderAhorrosHeader();
     gmRenderAhorros();
     document.getElementById('ah-monto').value    = '';
     document.getElementById('ah-concepto').value = '';
     toast('\u2705 Ahorro guardado', 'success');
+    if (document.getElementById('modal-gm-ahorros')) { document.getElementById('modal-gm-ahorros').remove(); gmAbrirAhorros(); }
 }
 
 async function gmEliminarAhorro(id) {
@@ -1410,7 +1410,6 @@ async function gmEliminarAhorro(id) {
     if (!ok) return;
     DB.ahorros.movimientos = DB.ahorros.movimientos.filter(m => m.id !== id);
     save();
-    gmRenderAhorrosHeader();
     gmRenderAhorros();
     if (document.getElementById('modal-ahorros-historial')) gmRenderTablaHistorialAhorros();
     toast('Movimiento eliminado', 'success');
@@ -1471,7 +1470,6 @@ function gmEditarSubrubro(id) {
     save();
     gmRefrescarModalSubrubros();
     gmRenderAhorros();
-    gmRenderAhorrosHeader();
 }
 
 async function gmEliminarSubrubro(id) {
@@ -2587,7 +2585,6 @@ function render() {
     // ── Reporte mensual ──
     actualizarRubrosRapidos();
     renderTop5Rubros();
-    gmRenderAhorrosHeader();
     const listaReporte = document.getElementById('lista-reporte-mensual');
     listaReporte.innerHTML = '';
     const mesesOrdenados = Object.keys(metricas.mapaMensual).sort().reverse();
