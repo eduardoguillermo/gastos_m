@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.46 · Ledger Edition</div>
+    <div class="splash-version">v13.47 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -607,12 +607,12 @@
     <!-- PANEL AHORROS COLAPSABLE -->
     <div id="panel-ahorros" style="margin:8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card);box-shadow:var(--shadow-sm);overflow:hidden;">
         <div id="ahorros-header" data-open="0" onclick="gmToggleAhorros()" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;user-select:none;background:var(--bg-card);">
-            <div style="display:flex;align-items:center;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;pointer-events:none;">
                 <span style="font-size:15px;">💰</span>
                 <span style="font-weight:700;font-size:13px;color:var(--text-main);">Ahorros</span>
                 <span id="ahorros-total-header" style="font-size:13px;font-weight:700;color:var(--ingreso);">$0</span>
             </div>
-            <span id="ahorros-chevron" style="font-size:12px;color:var(--text-muted);transition:transform 0.2s;">▼</span>
+            <span id="ahorros-chevron" style="font-size:12px;color:var(--text-muted);transition:transform 0.2s;pointer-events:none;">▼</span>
         </div>
         <div id="ahorros-body" style="display:none;border-top:1px solid var(--border);padding:12px 14px;">
             <!-- Saldos por subrubro -->
@@ -684,7 +684,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.46';
+const APP_VERSION = '13.47';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
