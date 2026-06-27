@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.54 · Ledger Edition</div>
+    <div class="splash-version">v13.55 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -426,6 +426,7 @@
                 <button class="tab-btn active" data-tab="tab-carga">✍️ Carga</button>
                 <button class="tab-btn" data-tab="tab-rubros">📁 Rubros</button>
                 <button class="tab-btn" data-tab="tab-bancos">🏦 Cuentas</button>
+                <button class="tab-btn" data-tab="tab-fijos">📋 Fijos</button>
 
             </div>
 
@@ -555,6 +556,12 @@
                 </div>
             </div>
 
+            <!-- TAB FIJOS -->
+            <div id="tab-fijos" class="tab-content" style="flex-direction:column;gap:8px;overflow-y:auto;padding-bottom:8px;">
+                <div id="fijos-lista" style="flex:0 0 auto;"></div>
+                <div id="cuotas-lista" style="flex:0 0 auto;"></div>
+            </div>
+
         </div>
 
         <!-- PANEL CENTRAL: LIBRO DIARIO -->
@@ -635,7 +642,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.54';
+const APP_VERSION = '13.55';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -906,6 +913,11 @@ let DB = {
         ],
         movimientos: [],
         nid: 1
+    },
+    fijos: {
+        servicios: [],
+        cuotas: [],
+        nid: 1
     }
 };
 
@@ -977,6 +989,10 @@ function migrar(data) {
     data.rubros       = Array.isArray(data.rubros)       ? data.rubros       : [];
     data.movimientos  = Array.isArray(data.movimientos)  ? data.movimientos  : [];
     data.presupuestosHistoricos = data.presupuestosHistoricos || {};
+    if (!data.fijos) data.fijos = { servicios: [], cuotas: [], nid: 1 };
+    if (!data.fijos.servicios) data.fijos.servicios = [];
+    if (!data.fijos.cuotas)   data.fijos.cuotas   = [];
+    if (!data.fijos.nid)      data.fijos.nid       = 1;
     if (!data.ahorros) data.ahorros = { subrubros: [{id:1,nombre:'Cambio Auto'},{id:2,nombre:'Reservas'}], movimientos: [], nid: 1 };
     if (!data.ahorros.subrubros)   data.ahorros.subrubros   = [{id:1,nombre:'Cambio Auto'},{id:2,nombre:'Reservas'}];
     if (!data.ahorros.movimientos) data.ahorros.movimientos = [];
@@ -1348,6 +1364,350 @@ function gmSaldosPorSubrubro() {
     return saldos;
 }
 
+// ════════════════════════════════════════════════════
+//  SERVICIOS FIJOS Y CUOTAS
+// ════════════════════════════════════════════════════
+
+function gmRenderFijos() {
+    gmRenderServicios();
+    gmRenderCuotas();
+}
+
+// ── SERVICIOS FIJOS ───────────────────────────────────────────────────────
+
+function gmRenderServicios() {
+    var cont = document.getElementById('fijos-lista');
+    if (!cont) return;
+    var svcs = DB.fijos.servicios;
+
+    var addBtn = '<button onclick="gmAbrirFormServicio()" style="width:100%;padding:7px;background:var(--primary);color:white;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:8px;">➕ Nuevo servicio fijo</button>';
+
+    if (!svcs.length) {
+        cont.innerHTML = '<div style="margin-bottom:4px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Servicios Fijos</div>' + addBtn + '<p style="font-size:12px;color:var(--text-muted);">Sin servicios registrados.</p>';
+        return;
+    }
+
+    var hoy = hoyISO();
+    var mesActual = hoy.slice(0,7);
+
+    var rows = svcs.map(function(s) {
+        var pagoMes = s.pagos && s.pagos[mesActual];
+        var venc = mesActual + '-' + String(s.dia).padStart(2,'0');
+        var dias = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
+        var semaforo = pagoMes ? '#059669' : (dias < 0 ? '#dc2626' : dias <= 2 ? '#d97706' : '#64748b');
+        var estadoTxt = pagoMes ? '✅ Pagado ' + pagoMes : (dias < 0 ? '⚠️ Vencido' : 'Vence día ' + s.dia);
+        return '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;background:var(--bg-subtle);margin-bottom:5px;border-left:3px solid ' + semaforo + ';">'
+            + '<div style="flex:1;min-width:0;">'
+            + '<div style="font-size:12px;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + s.nombre + '</div>'
+            + '<div style="font-size:10px;color:var(--text-muted);">' + fmt(s.monto) + ' · <span style="color:' + semaforo + ';font-weight:600;">' + estadoTxt + '</span></div>'
+            + '</div>'
+            + (pagoMes ? '' : '<button data-svc="' + s.id + '" class="btn-pagar-svc" style="background:var(--ingreso);color:white;border:none;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;white-space:nowrap;">Pagar</button>')
+            + '<button data-edit-svc="' + s.id + '" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:10px;cursor:pointer;">✏️</button>'
+            + '<button data-del-svc="' + s.id + '" style="background:none;border:1px solid var(--gasto);border-radius:4px;padding:3px 6px;font-size:10px;cursor:pointer;color:var(--gasto);">✕</button>'
+            + '</div>';
+    }).join('');
+
+    cont.innerHTML = '<div style="margin-bottom:4px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Servicios Fijos</div>' + addBtn + rows;
+
+    cont.querySelectorAll('.btn-pagar-svc').forEach(function(btn) {
+        btn.addEventListener('click', function() { gmPagarServicio(parseInt(btn.dataset.svc)); });
+    });
+    cont.querySelectorAll('[data-edit-svc]').forEach(function(btn) {
+        btn.addEventListener('click', function() { gmAbrirFormServicio(parseInt(btn.dataset.editSvc)); });
+    });
+    cont.querySelectorAll('[data-del-svc]').forEach(function(btn) {
+        btn.addEventListener('click', function() { gmEliminarServicio(parseInt(btn.dataset.delSvc)); });
+    });
+}
+
+function gmPagarServicio(id) {
+    var s = DB.fijos.servicios.find(function(x){ return x.id===id; });
+    if (!s) return;
+    if (!s.pagos) s.pagos = {};
+    var mes = hoyISO().slice(0,7);
+    s.pagos[mes] = hoyISO();
+    save();
+    gmRenderServicios();
+    toast('✅ ' + s.nombre + ' marcado como pagado', 'success');
+}
+
+async function gmEliminarServicio(id) {
+    var ok = await showConfirm('Eliminar servicio', '¿Eliminar este servicio fijo?');
+    if (!ok) return;
+    DB.fijos.servicios = DB.fijos.servicios.filter(function(x){ return x.id!==id; });
+    save();
+    gmRenderServicios();
+}
+
+function gmAbrirFormServicio(id) {
+    var existing = document.getElementById('modal-form-servicio');
+    if (existing) existing.remove();
+    var s = id ? DB.fijos.servicios.find(function(x){ return x.id===id; }) : null;
+
+    var ov = document.createElement('div');
+    ov.id = 'modal-form-servicio';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:3100;display:flex;align-items:center;justify-content:center;padding:16px;';
+    ov.innerHTML = '<div style="background:var(--bg-card);border-radius:14px;width:100%;max-width:360px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);">'
+        + '<span style="font-weight:700;font-size:15px;">' + (s ? '✏️ Editar servicio' : '➕ Nuevo servicio fijo') + '</span>'
+        + '<button id="btn-cerrar-form-svc" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">×</button>'
+        + '</div>'
+        + '<div style="padding:16px;">'
+        + '<div style="margin-bottom:10px;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Nombre</label>'
+        + '<input id="svc-nombre" type="text" value="' + (s ? s.nombre : '') + '" placeholder="Ej: Internet" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;box-sizing:border-box;"></div>'
+        + '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+        + '<div style="flex:1;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Monto ($)</label>'
+        + '<input id="svc-monto" type="number" min="0" value="' + (s ? s.monto : '') + '" placeholder="0" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;box-sizing:border-box;"></div>'
+        + '<div style="width:80px;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Día venc.</label>'
+        + '<input id="svc-dia" type="number" min="1" max="31" value="' + (s ? s.dia : '') + '" placeholder="10" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;box-sizing:border-box;"></div>'
+        + '</div>'
+        + '<button id="btn-guardar-svc" style="width:100%;padding:9px;background:var(--primary);color:white;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">' + (s ? 'Guardar cambios' : 'Agregar servicio') + '</button>'
+        + '</div></div>';
+
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+    document.getElementById('btn-cerrar-form-svc').addEventListener('click', function(){ ov.remove(); });
+    document.getElementById('btn-guardar-svc').addEventListener('click', function() {
+        var nombre = document.getElementById('svc-nombre').value.trim();
+        var monto  = parseFloat(document.getElementById('svc-monto').value);
+        var dia    = parseInt(document.getElementById('svc-dia').value);
+        if (!nombre) { toast('Ingresá el nombre.', 'error'); return; }
+        if (isNaN(monto) || monto < 0) { toast('Monto inválido.', 'error'); return; }
+        if (isNaN(dia) || dia < 1 || dia > 31) { toast('Día de vencimiento inválido (1-31).', 'error'); return; }
+        if (s) {
+            s.nombre = nombre; s.monto = monto; s.dia = dia;
+        } else {
+            DB.fijos.servicios.push({ id: DB.fijos.nid++, nombre: nombre, monto: monto, dia: dia, pagos: {} });
+        }
+        save();
+        ov.remove();
+        gmRenderServicios();
+        toast('✅ Servicio guardado', 'success');
+    });
+    setTimeout(function(){ document.getElementById('svc-nombre').focus(); }, 100);
+}
+
+// ── CUOTAS ────────────────────────────────────────────────────────────────
+
+function gmRenderCuotas() {
+    var cont = document.getElementById('cuotas-lista');
+    if (!cont) return;
+    var cuotas = DB.fijos.cuotas.filter(function(c){ return c.cuotaActual <= c.cuotasTotal; });
+
+    var addBtn = '<button onclick="gmAbrirFormCuota()" style="width:100%;padding:7px;background:var(--transferencia,#d97706);color:white;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:8px;">➕ Nueva cuota</button>';
+
+    if (!cuotas.length) {
+        cont.innerHTML = '<div style="margin-bottom:4px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Cuotas</div>' + addBtn + '<p style="font-size:12px;color:var(--text-muted);">Sin cuotas activas.</p>';
+        return;
+    }
+
+    var hoy = hoyISO();
+    var mesActual = hoy.slice(0,7);
+
+    var rows = cuotas.map(function(c) {
+        var venc = mesActual + '-' + String(c.dia).padStart(2,'0');
+        var dias = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
+        var pagadaMes = c.pagos && c.pagos[mesActual];
+        var semaforo = pagadaMes ? '#059669' : (dias < 0 ? '#dc2626' : dias <= 2 ? '#d97706' : '#64748b');
+        var estadoTxt = pagadaMes ? '✅ Pagada' : (dias < 0 ? '⚠️ Vencida' : 'Vence día ' + c.dia);
+        var progreso = Math.round((c.cuotaActual - 1) / c.cuotasTotal * 100);
+        return '<div style="padding:7px 8px;border-radius:6px;background:var(--bg-subtle);margin-bottom:5px;border-left:3px solid ' + semaforo + ';">'
+            + '<div style="display:flex;align-items:center;gap:8px;">'
+            + '<div style="flex:1;min-width:0;">'
+            + '<div style="font-size:12px;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + c.nombre + '</div>'
+            + '<div style="font-size:10px;color:var(--text-muted);">' + fmt(c.monto) + '/cuota · <span style="color:' + semaforo + ';font-weight:600;">' + estadoTxt + '</span></div>'
+            + '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Cuota ' + c.cuotaActual + ' de ' + c.cuotasTotal + '</div>'
+            + '</div>'
+            + (pagadaMes ? '' : '<button data-pag-cuota="' + c.id + '" style="background:var(--ingreso);color:white;border:none;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;white-space:nowrap;">Pagar</button>')
+            + '<button data-edit-cuota="' + c.id + '" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:10px;cursor:pointer;">✏️</button>'
+            + '<button data-del-cuota="' + c.id + '" style="background:none;border:1px solid var(--gasto);border-radius:4px;padding:3px 6px;font-size:10px;cursor:pointer;color:var(--gasto);">✕</button>'
+            + '</div>'
+            + '<div style="margin-top:5px;background:var(--border);border-radius:3px;height:3px;">'
+            + '<div style="height:3px;border-radius:3px;background:' + semaforo + ';width:' + progreso + '%;"></div>'
+            + '</div>'
+            + '</div>';
+    }).join('');
+
+    cont.innerHTML = '<div style="margin-bottom:4px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Cuotas</div>' + addBtn + rows;
+
+    cont.querySelectorAll('[data-pag-cuota]').forEach(function(btn) {
+        btn.addEventListener('click', function() { gmPagarCuota(parseInt(btn.dataset.pagCuota)); });
+    });
+    cont.querySelectorAll('[data-edit-cuota]').forEach(function(btn) {
+        btn.addEventListener('click', function() { gmAbrirFormCuota(parseInt(btn.dataset.editCuota)); });
+    });
+    cont.querySelectorAll('[data-del-cuota]').forEach(function(btn) {
+        btn.addEventListener('click', function() { gmEliminarCuota(parseInt(btn.dataset.delCuota)); });
+    });
+}
+
+function gmPagarCuota(id) {
+    var c = DB.fijos.cuotas.find(function(x){ return x.id===id; });
+    if (!c) return;
+    if (!c.pagos) c.pagos = {};
+    var mes = hoyISO().slice(0,7);
+    c.pagos[mes] = hoyISO();
+    c.cuotaActual++;
+    save();
+    gmRenderCuotas();
+    toast('✅ Cuota ' + (c.cuotaActual-1) + '/' + c.cuotasTotal + ' pagada', 'success');
+    if (c.cuotaActual > c.cuotasTotal) toast('🎉 ' + c.nombre + ' ¡terminada!', 'success');
+}
+
+async function gmEliminarCuota(id) {
+    var ok = await showConfirm('Eliminar cuota', '¿Eliminar esta cuota?');
+    if (!ok) return;
+    DB.fijos.cuotas = DB.fijos.cuotas.filter(function(x){ return x.id!==id; });
+    save();
+    gmRenderCuotas();
+}
+
+function gmAbrirFormCuota(id) {
+    var existing = document.getElementById('modal-form-cuota');
+    if (existing) existing.remove();
+    var c = id ? DB.fijos.cuotas.find(function(x){ return x.id===id; }) : null;
+
+    var ov = document.createElement('div');
+    ov.id = 'modal-form-cuota';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:3100;display:flex;align-items:center;justify-content:center;padding:16px;';
+    ov.innerHTML = '<div style="background:var(--bg-card);border-radius:14px;width:100%;max-width:360px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);">'
+        + '<span style="font-weight:700;font-size:15px;">' + (c ? '✏️ Editar cuota' : '➕ Nueva cuota') + '</span>'
+        + '<button id="btn-cerrar-form-cuota" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">×</button>'
+        + '</div>'
+        + '<div style="padding:16px;">'
+        + '<div style="margin-bottom:10px;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Nombre</label>'
+        + '<input id="cuota-nombre" type="text" value="' + (c ? c.nombre : '') + '" placeholder="Ej: Heladera" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;box-sizing:border-box;"></div>'
+        + '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+        + '<div style="flex:1;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Monto/cuota ($)</label>'
+        + '<input id="cuota-monto" type="number" min="0" value="' + (c ? c.monto : '') + '" placeholder="0" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;box-sizing:border-box;"></div>'
+        + '<div style="width:70px;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Día venc.</label>'
+        + '<input id="cuota-dia" type="number" min="1" max="31" value="' + (c ? c.dia : '') + '" placeholder="15" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;box-sizing:border-box;"></div>'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;margin-bottom:14px;">'
+        + '<div style="flex:1;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Cuota actual</label>'
+        + '<input id="cuota-actual" type="number" min="1" value="' + (c ? c.cuotaActual : '1') + '" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;box-sizing:border-box;"></div>'
+        + '<div style="flex:1;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Total cuotas</label>'
+        + '<input id="cuota-total" type="number" min="1" value="' + (c ? c.cuotasTotal : '') + '" placeholder="12" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;box-sizing:border-box;"></div>'
+        + '</div>'
+        + '<button id="btn-guardar-cuota" style="width:100%;padding:9px;background:var(--transferencia,#d97706);color:white;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">' + (c ? 'Guardar cambios' : 'Agregar cuota') + '</button>'
+        + '</div></div>';
+
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+    document.getElementById('btn-cerrar-form-cuota').addEventListener('click', function(){ ov.remove(); });
+    document.getElementById('btn-guardar-cuota').addEventListener('click', function() {
+        var nombre  = document.getElementById('cuota-nombre').value.trim();
+        var monto   = parseFloat(document.getElementById('cuota-monto').value);
+        var dia     = parseInt(document.getElementById('cuota-dia').value);
+        var actual  = parseInt(document.getElementById('cuota-actual').value);
+        var total   = parseInt(document.getElementById('cuota-total').value);
+        if (!nombre) { toast('Ingresá el nombre.', 'error'); return; }
+        if (isNaN(monto) || monto < 0) { toast('Monto inválido.', 'error'); return; }
+        if (isNaN(dia) || dia < 1 || dia > 31) { toast('Día inválido (1-31).', 'error'); return; }
+        if (isNaN(actual) || actual < 1) { toast('Cuota actual inválida.', 'error'); return; }
+        if (isNaN(total) || total < 1) { toast('Total de cuotas inválido.', 'error'); return; }
+        if (c) {
+            c.nombre = nombre; c.monto = monto; c.dia = dia; c.cuotaActual = actual; c.cuotasTotal = total;
+        } else {
+            DB.fijos.cuotas.push({ id: DB.fijos.nid++, nombre: nombre, monto: monto, dia: dia, cuotaActual: actual, cuotasTotal: total, pagos: {} });
+        }
+        save();
+        ov.remove();
+        gmRenderCuotas();
+        toast('✅ Cuota guardada', 'success');
+    });
+    setTimeout(function(){ document.getElementById('cuota-nombre').focus(); }, 100);
+}
+
+// ── MODAL VENCIMIENTOS ────────────────────────────────────────────────────
+
+function gmDiasHabilesDesde(fechaISO, n) {
+    var dias = [];
+    var d = new Date(fechaISO + 'T00:00:00');
+    while (dias.length < n) {
+        d.setDate(d.getDate() + 1);
+        var dow = d.getDay();
+        if (dow !== 0 && dow !== 6) dias.push(d.toISOString().slice(0,10));
+    }
+    return dias;
+}
+
+function gmMostrarVencimientos() {
+    var hoy = hoyISO();
+    var proxDias = [hoy].concat(gmDiasHabilesDesde(hoy, 5));
+    var mesActual = hoy.slice(0,7);
+
+    var items = [];
+
+    // Servicios fijos
+    DB.fijos.servicios.forEach(function(s) {
+        if (s.pagos && s.pagos[mesActual]) return; // ya pagado
+        var venc = mesActual + '-' + String(s.dia).padStart(2,'0');
+        var diasRestantes = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
+        if (proxDias.indexOf(venc) !== -1 || diasRestantes < 0) {
+            items.push({ nombre: s.nombre, monto: s.monto, venc: venc, dias: diasRestantes, tipo: 'Servicio' });
+        }
+    });
+
+    // Cuotas
+    DB.fijos.cuotas.filter(function(c){ return c.cuotaActual <= c.cuotasTotal; }).forEach(function(c) {
+        if (c.pagos && c.pagos[mesActual]) return;
+        var venc = mesActual + '-' + String(c.dia).padStart(2,'0');
+        var diasRestantes = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
+        if (proxDias.indexOf(venc) !== -1 || diasRestantes < 0) {
+            items.push({ nombre: c.nombre + ' (' + c.cuotaActual + '/' + c.cuotasTotal + ')', monto: c.monto, venc: venc, dias: diasRestantes, tipo: 'Cuota' });
+        }
+    });
+
+    if (!items.length) return; // nada que mostrar
+
+    items.sort(function(a,b){ return a.dias - b.dias; });
+
+    var existing = document.getElementById('modal-vencimientos');
+    if (existing) existing.remove();
+
+    var rows = items.map(function(it) {
+        var color = it.dias < 0 ? '#dc2626' : it.dias === 0 ? '#d97706' : it.dias <= 2 ? '#d97706' : '#ca8a04';
+        var badge = it.dias < 0 ? 'Vencido' : it.dias === 0 ? 'Hoy' : 'En ' + it.dias + ' día' + (it.dias===1?'':'s');
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-subtle);border-left:3px solid ' + color + ';">'
+            + '<div style="flex:1;min-width:0;">'
+            + '<div style="font-size:13px;font-weight:700;color:var(--text-main);">' + it.nombre + '</div>'
+            + '<div style="font-size:11px;color:var(--text-muted);">' + it.tipo + ' · ' + fmt(it.monto) + ' · vence ' + it.venc + '</div>'
+            + '</div>'
+            + '<span style="font-size:11px;font-weight:700;color:white;background:' + color + ';padding:3px 8px;border-radius:10px;white-space:nowrap;">' + badge + '</span>'
+            + '</div>';
+    }).join('');
+
+    var ov = document.createElement('div');
+    ov.id = 'modal-vencimientos';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:4000;display:flex;align-items:center;justify-content:center;padding:16px;';
+    ov.innerHTML = '<div style="background:var(--bg-card);border-radius:14px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:2px solid var(--border);background:var(--bg-subtle);">'
+        + '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">⚠️</span><span style="font-weight:700;font-size:15px;color:var(--text-main);">Próximos vencimientos</span></div>'
+        + '<button id="btn-cerrar-venc" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">×</button>'
+        + '</div>'
+        + '<div style="padding:14px 16px;max-height:70vh;overflow-y:auto;">' + rows + '</div>'
+        + '<div style="padding:12px 16px;border-top:1px solid var(--border);">'
+        + '<button id="btn-ir-fijos" style="width:100%;padding:8px;background:var(--primary);color:white;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">Ver tab Fijos</button>'
+        + '</div></div>';
+
+    document.body.appendChild(ov);
+    document.getElementById('btn-cerrar-venc').addEventListener('click', function(){ ov.remove(); });
+    document.getElementById('btn-ir-fijos').addEventListener('click', function(){
+        ov.remove();
+        // Activar tab Fijos
+        document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+        document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
+        var tabBtn = document.querySelector('[data-tab="tab-fijos"]');
+        var tabContent = document.getElementById('tab-fijos');
+        if (tabBtn) tabBtn.classList.add('active');
+        if (tabContent) { tabContent.classList.add('active'); gmRenderFijos(); }
+    });
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+}
+
+
 function gmAbrirAhorros() {
     var el = document.getElementById('modal-gm-ahorros');
     if (el) el.remove();
@@ -1677,6 +2037,7 @@ function initTabs() {
             const tabId = this.dataset.tab;
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (tabId === 'tab-fijos') gmRenderFijos();
             document.getElementById(tabId).classList.add('active');
             this.classList.add('active');
         });
@@ -2716,6 +3077,7 @@ window.addEventListener('DOMContentLoaded', function() {
     });
 
     render();
+    setTimeout(gmMostrarVencimientos, 800);
 
     // Splash: cierre independiente — no depende de async (restaurarCarpetaGuardada)
     const splash = document.getElementById('splash');
