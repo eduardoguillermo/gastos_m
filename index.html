@@ -352,13 +352,14 @@
         }
     </style>
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.40 · Ledger Edition</div>
+    <div class="splash-version">v13.41 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -632,7 +633,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.40';
+const APP_VERSION = '13.41';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1106,7 +1107,8 @@ function gmExportarHistorialXLSX() {
 
     const movsFiltrados = DB.movimientos.filter(m => {
         if (!m.fecha) return false;
-        if (fTipo && m.tipo !== fTipo) return false;
+        const tipoMov = getTipoMov(m);
+        if (fTipo && tipoMov !== fTipo) return false;
         if (fRubroId && m.rubroId !== fRubroId) return false;
         const monto = parseFloat(m.monto)||0;
         if (monto < fMontoMin || monto > fMontoMax) return false;
@@ -1119,7 +1121,7 @@ function gmExportarHistorialXLSX() {
         const rubro = DB.rubros.find(r=>r.id===m.rubroId);
         const cuenta = DB.cuentas[m.origen] || m.origen || '-';
         rows.push([
-            m.fecha, m.concepto, m.tipo||'-',
+            m.fecha, m.concepto, getTipoMov(m),
             rubro?rubro.nombre:'-', cuenta,
             parseFloat(m.monto)||0, m.notas||''
         ]);
