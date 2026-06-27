@@ -358,7 +358,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.39 · Ledger Edition</div>
+    <div class="splash-version">v13.40 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -632,7 +632,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.39';
+const APP_VERSION = '13.40';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1145,7 +1145,7 @@ function gmAbrirTortas() {
 
     function gastosPorRubro(movs) {
         const mapa = {};
-        movs.filter(m => m.tipo === 'gasto').forEach(m => {
+        movs.filter(m => getTipoMov(m) === 'gasto').forEach(m => {
             const r = DB.rubros.find(rb => rb.id == m.rubroId);
             const nombre = r ? r.nombre : 'Sin rubro';
             mapa[nombre] = (mapa[nombre] || 0) + (parseFloat(m.monto) || 0);
@@ -1153,8 +1153,8 @@ function gmAbrirTortas() {
         return Object.entries(mapa).sort((a, b) => b[1] - a[1]);
     }
 
-    const movsEste = DB.movimientos.filter(m => claveMesDeISO(m.fecha) === mesActual);
-    const movs12   = DB.movimientos.filter(m => claveMesDeISO(m.fecha) >= hace12);
+    const movsEste = DB.movimientos.filter(m => claveMesDeISO(m.fecha) === mesActual && getTipoMov(m) !== 'transferencia');
+    const movs12   = DB.movimientos.filter(m => claveMesDeISO(m.fecha) >= hace12 && getTipoMov(m) !== 'transferencia');
     const dataMes  = gastosPorRubro(movsEste);
     const data12   = gastosPorRubro(movs12);
 
@@ -1322,7 +1322,8 @@ function renderHistorial() {
     // Filtrar movimientos
     const movsFiltrados = DB.movimientos.filter(m => {
         if (!m.fecha) return false;
-        if (fTipo && m.tipo !== fTipo) return false;
+        const tipoMov = getTipoMov(m);
+        if (fTipo && tipoMov !== fTipo) return false;
         if (fRubroId && m.rubroId !== fRubroId) return false;
         const monto = parseFloat(m.monto) || 0;
         if (monto < fMontoMin || monto > fMontoMax) return false;
@@ -1337,8 +1338,9 @@ function renderHistorial() {
         const clave = claveMesDeISO(m.fecha);
         if (!meses[clave]) meses[clave] = { ingresos: 0, gastos: 0, movs: [] };
         const v = parseFloat(m.monto) || 0;
-        if (m.tipo === 'ingreso') meses[clave].ingresos += v;
-        else if (m.tipo === 'gasto') meses[clave].gastos += v;
+        const tipoMov = getTipoMov(m);
+        if (tipoMov === 'ingreso') meses[clave].ingresos += v;
+        else if (tipoMov === 'gasto') meses[clave].gastos += v;
         meses[clave].movs.push(m);
     });
 
@@ -1369,8 +1371,9 @@ function renderHistorial() {
         const balColor = balance >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
         const detalleRows = d.movs.sort((a,b)=>a.fecha>b.fecha?-1:1).map(mv => {
             const rubro = DB.rubros.find(r=>r.id===mv.rubroId);
-            const color = mv.tipo==='ingreso'?'var(--ingreso)':'var(--gasto)';
-            const signo = mv.tipo==='ingreso'?'+':'-';
+            const tipoMvDet = getTipoMov(mv);
+            const color = tipoMvDet==='ingreso'?'var(--ingreso)':'var(--gasto)';
+            const signo = tipoMvDet==='ingreso'?'+':'-';
             return `<tr style="border-bottom:1px solid var(--border);">
                 <td style="padding:4px 6px;">${mv.fecha}</td>
                 <td style="padding:4px 6px;">${mv.concepto||'-'}</td>
