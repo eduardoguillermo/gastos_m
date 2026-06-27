@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.50 · Ledger Edition</div>
+    <div class="splash-version">v13.51 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -684,7 +684,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.50';
+const APP_VERSION = '13.51';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1332,219 +1332,163 @@ function gmTortaTab(tab) {
 //  AHORROS
 // ════════════════════════════════════════════════════
 
-let _ahToggleLock = false;
-function gmToggleAhorros() {
-    if (_ahToggleLock) return;
-    _ahToggleLock = true;
-    setTimeout(() => { _ahToggleLock = false; }, 300);
-    const hdr     = document.getElementById('ahorros-header');
-    const body    = document.getElementById('ahorros-body');
-    const chevron = document.getElementById('ahorros-chevron');
-    const abierto = hdr.dataset.open === '1';
-    hdr.dataset.open        = abierto ? '0' : '1';
-    body.style.display      = abierto ? 'none' : 'block';
-    chevron.style.transform = abierto ? '' : 'rotate(180deg)';
-    if (!abierto) gmRenderAhorros();
-}
-
 function gmSaldosPorSubrubro() {
-    const saldos = {};
-    DB.ahorros.subrubros.forEach(s => { saldos[s.id] = 0; });
-    DB.ahorros.movimientos.forEach(m => {
+    var saldos = {};
+    DB.ahorros.subrubros.forEach(function(s) { saldos[s.id] = 0; });
+    DB.ahorros.movimientos.forEach(function(m) {
         if (saldos[m.subrubroId] === undefined) saldos[m.subrubroId] = 0;
         saldos[m.subrubroId] += m.tipo === 'ingreso' ? m.monto : -m.monto;
     });
     return saldos;
 }
 
-function gmTotalAhorros() {
-    return Object.values(gmSaldosPorSubrubro()).reduce((a, v) => a + v, 0);
-}
-
-function gmRenderAhorrosHeader() {
-    const el = document.getElementById('ahorros-total-header');
-    if (el) el.textContent = fmt(gmTotalAhorros());
-}
-
-function gmRenderAhorros() {
-    const saldos = gmSaldosPorSubrubro();
-    const cont = document.getElementById('ahorros-saldos');
-    if (cont) {
-        cont.innerHTML = DB.ahorros.subrubros.map(s => {
-            const saldo = saldos[s.id] || 0;
-            const color = saldo >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
-            return '<div style="background:var(--bg-subtle);border:1px solid var(--border);border-radius:8px;padding:8px 14px;min-width:120px;">'
-                 + '<div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;margin-bottom:2px;">' + s.nombre + '</div>'
-                 + '<div style="font-size:16px;font-weight:700;color:' + color + ';">' + fmt(saldo) + '</div>'
-                 + '</div>';
-        }).join('');
-    }
-    const sel = document.getElementById('ah-subrubro');
-    if (sel) {
-        sel.innerHTML = DB.ahorros.subrubros.map(s =>
-            '<option value="' + s.id + '">' + s.nombre + '</option>'
-        ).join('');
-    }
-    const fechaEl = document.getElementById('ah-fecha');
-    if (fechaEl && !fechaEl.value) fechaEl.value = hoyISO();
+function gmAbrirAhorros() {
+    var el = document.getElementById('modal-gm-ahorros');
+    if (el) el.remove();
+    var saldos = gmSaldosPorSubrubro();
+    var total = Object.values(saldos).reduce(function(a,v){ return a+v; }, 0);
+    var tarjetasHtml = DB.ahorros.subrubros.map(function(s) {
+        var sal = saldos[s.id] || 0;
+        var col = sal >= 0 ? 'var(--ingreso)' : 'var(--gasto)';
+        return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px 18px;min-width:130px;text-align:center;"><div style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:4px;">' + s.nombre + '</div><div style="font-size:18px;font-weight:700;color:' + col + ';">' + fmt(sal) + '</div></div>';
+    }).join('');
+    var subOptsHtml = DB.ahorros.subrubros.map(function(s) {
+        return '<option value="' + s.id + '">' + s.nombre + '</option>';
+    }).join('');
+    var ov = document.createElement('div');
+    ov.id = 'modal-gm-ahorros';
+    ov.style.cssText = 'position:fixed;inset:0;background:var(--bg-main,#f1f5f9);z-index:3000;display:flex;flex-direction:column;overflow:hidden;';
+    var closeBtn = '<button id="btn-cerrar-ahorros" style="background:#f1f5f9;color:#334155;border:none;border-radius:6px;padding:6px 16px;font-size:13px;cursor:pointer;font-weight:600;">&#x2715; Cerrar</button>';
+    var guardarBtn = '<button id="btn-guardar-ahorro" style="padding:7px 16px;background:var(--ingreso);color:white;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">&#x2713; Guardar</button>';
+    var subModal = '<button id="btn-subrubros-ahorros" style="background:#6d28d9;color:white;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;">&#x2699; Subrubros</button>';
+    ov.innerHTML = '<div style="background:var(--bg-card);border-bottom:2px solid var(--border);flex-shrink:0;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px 10px;">'
+        + '<div style="display:flex;align-items:center;gap:12px;"><span style="font-size:20px;">&#x1F4B0;</span><h2 style="margin:0;font-size:18px;color:var(--text-main);">Ahorros</h2><span style="font-size:15px;font-weight:700;color:var(--ingreso);">' + fmt(total) + '</span></div>'
+        + '<div style="display:flex;gap:8px;">' + subModal + closeBtn + '</div></div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:10px;padding:0 20px 14px;">' + tarjetasHtml + '</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 14px;align-items:flex-end;">'
+        + '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Subrubro</label><select id="ah-subrubro" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:12px;">' + subOptsHtml + '</select></div>'
+        + '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Tipo</label><select id="ah-tipo" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:12px;"><option value="ingreso">Ingreso</option><option value="retiro">Retiro</option></select></div>'
+        + '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Monto</label><input id="ah-monto" type="number" min="0" step="any" placeholder="0" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:12px;width:120px;"></div>'
+        + '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Concepto</label><input id="ah-concepto" type="text" placeholder="Opcional" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:12px;width:150px;"></div>'
+        + '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Fecha</label><input id="ah-fecha" type="date" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:12px;"></div>'
+        + guardarBtn + '</div></div>'
+        + '<div style="flex:1;overflow-y:auto;padding:12px 20px;"><div id="tabla-historial-ahorros"></div></div>';
+    document.body.appendChild(ov);
+    document.getElementById('ah-fecha').value = hoyISO();
+    document.getElementById('btn-cerrar-ahorros').addEventListener('click', function(){ ov.remove(); });
+    document.getElementById('btn-guardar-ahorro').addEventListener('click', gmGuardarAhorro);
+    document.getElementById('btn-subrubros-ahorros').addEventListener('click', gmAbrirSubrubros);
+    gmRenderTablaHistorialAhorros();
 }
 
 function gmGuardarAhorro() {
-    const subrubroId = parseInt(document.getElementById('ah-subrubro').value);
-    const tipo       = document.getElementById('ah-tipo').value;
-    const monto      = parseFloat(document.getElementById('ah-monto').value);
-    const concepto   = document.getElementById('ah-concepto').value.trim();
-    const fecha      = document.getElementById('ah-fecha').value || hoyISO();
-    if (isNaN(monto) || monto <= 0) { toast('Ingres\u00e1 un monto v\u00e1lido.', 'error'); return; }
-    DB.ahorros.movimientos.push({ id: DB.ahorros.nid++, subrubroId, tipo, monto, concepto, fecha });
+    var subrubroId = parseInt(document.getElementById('ah-subrubro').value);
+    var tipo = document.getElementById('ah-tipo').value;
+    var monto = parseFloat(document.getElementById('ah-monto').value);
+    var concepto = document.getElementById('ah-concepto').value.trim();
+    var fecha = document.getElementById('ah-fecha').value || hoyISO();
+    if (isNaN(monto) || monto <= 0) { toast('Ingresá un monto válido.', 'error'); return; }
+    DB.ahorros.movimientos.push({ id: DB.ahorros.nid++, subrubroId: subrubroId, tipo: tipo, monto: monto, concepto: concepto, fecha: fecha });
     save();
-    gmRenderAhorros();
-    document.getElementById('ah-monto').value    = '';
-    document.getElementById('ah-concepto').value = '';
-    toast('\u2705 Ahorro guardado', 'success');
-    if (document.getElementById('modal-gm-ahorros')) { document.getElementById('modal-gm-ahorros').remove(); gmAbrirAhorros(); }
+    toast('✅ Ahorro guardado', 'success');
+    gmAbrirAhorros();
 }
 
 async function gmEliminarAhorro(id) {
-    const ok = await showConfirm('Eliminar movimiento', '\u00bfEliminar este movimiento de ahorros?');
+    var ok = await showConfirm('Eliminar movimiento', '¿Eliminar este movimiento?');
     if (!ok) return;
-    DB.ahorros.movimientos = DB.ahorros.movimientos.filter(m => m.id !== id);
+    DB.ahorros.movimientos = DB.ahorros.movimientos.filter(function(m){ return m.id !== id; });
     save();
-    gmRenderAhorros();
-    if (document.getElementById('modal-ahorros-historial')) gmRenderTablaHistorialAhorros();
-    toast('Movimiento eliminado', 'success');
+    gmAbrirAhorros();
+    toast('Eliminado', 'success');
 }
 
 function gmRefrescarModalSubrubros() {
-    const lista = document.getElementById('lista-subrubros');
+    var lista = document.getElementById('lista-subrubros');
     if (!lista) return;
-    lista.innerHTML = DB.ahorros.subrubros.map(s =>
-        '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">'
-        + '<span style="flex:1;font-size:13px;color:var(--text-main);">' + s.nombre + '</span>'
-        + '<button onclick="gmEditarSubrubro(' + s.id + ')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text-muted);">\u270f\ufe0f</button>'
-        + '<button onclick="gmEliminarSubrubro(' + s.id + ')" style="background:none;border:1px solid var(--gasto);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--gasto);">\u2715</button>'
-        + '</div>'
-    ).join('');
+    lista.innerHTML = DB.ahorros.subrubros.map(function(s) {
+        return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);"><span style="flex:1;font-size:13px;">' + s.nombre + '</span>'
+            + '<button data-edit="' + s.id + '" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">✏️</button>'
+            + '<button data-del="' + s.id + '" style="background:none;border:1px solid var(--gasto);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--gasto);">✕</button>'
+            + '</div>';
+    }).join('');
+    lista.querySelectorAll('[data-edit]').forEach(function(btn){
+        btn.addEventListener('click', function(){ gmEditarSubrubro(parseInt(btn.dataset.edit)); });
+    });
+    lista.querySelectorAll('[data-del]').forEach(function(btn){
+        btn.addEventListener('click', function(){ gmEliminarSubrubro(parseInt(btn.dataset.del)); });
+    });
 }
 
 function gmAbrirSubrubros() {
-    document.getElementById('modal-ahorros-subrubros')?.remove();
-    const ov = document.createElement('div');
+    var ex = document.getElementById('modal-ahorros-subrubros');
+    if (ex) ex.remove();
+    var ov = document.createElement('div');
     ov.id = 'modal-ahorros-subrubros';
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:3100;display:flex;align-items:center;justify-content:center;padding:16px;';
-    ov.innerHTML = '<div style="background:var(--bg-card);border-radius:14px;width:100%;max-width:380px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'
-        + '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);">'
-        + '<span style="font-weight:700;font-size:15px;">\u2699\ufe0f Subrubros</span>'
-        + '<button onclick="document.getElementById(\'modal-ahorros-subrubros\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">\u00d7</button>'
-        + '</div>'
-        + '<div style="padding:14px 16px;">'
-        + '<div id="lista-subrubros"></div>'
-        + '<div style="display:flex;gap:8px;margin-top:12px;">'
-        + '<input id="nuevo-subrubro-nombre" type="text" placeholder="Nuevo subrubro..." style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;">'
-        + '<button onclick="gmAgregarSubrubro()" style="padding:7px 14px;background:var(--primary);color:white;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;">\u2795 Agregar</button>'
-        + '</div></div></div>';
+    ov.innerHTML = '<div style="background:var(--bg-card);border-radius:14px;width:100%;max-width:380px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);"><div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);"><span style="font-weight:700;font-size:15px;">⚙️ Subrubros</span><button id="btn-cerrar-subrubros" style="background:none;border:none;font-size:20px;cursor:pointer;">×</button></div><div style="padding:14px 16px;"><div id="lista-subrubros"></div><div style="display:flex;gap:8px;margin-top:12px;"><input id="nuevo-subrubro-nombre" type="text" placeholder="Nuevo subrubro..." style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;"><button id="btn-agregar-subrubro" style="padding:7px 14px;background:var(--primary);color:white;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;">➕ Agregar</button></div></div></div>';
     document.body.appendChild(ov);
-    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    document.getElementById('btn-cerrar-subrubros').addEventListener('click', function(){ ov.remove(); });
+    document.getElementById('btn-agregar-subrubro').addEventListener('click', gmAgregarSubrubro);
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
     gmRefrescarModalSubrubros();
 }
 
 function gmAgregarSubrubro() {
-    const input = document.getElementById('nuevo-subrubro-nombre');
-    const nombre = input.value.trim();
-    if (!nombre) { toast('Ingres\u00e1 un nombre.', 'error'); return; }
-    const maxId = DB.ahorros.subrubros.reduce((m, s) => Math.max(m, s.id), 0);
-    DB.ahorros.subrubros.push({ id: maxId + 1, nombre });
+    var input = document.getElementById('nuevo-subrubro-nombre');
+    var nombre = input.value.trim();
+    if (!nombre) { toast('Ingresá un nombre.', 'error'); return; }
+    var maxId = DB.ahorros.subrubros.reduce(function(m,s){ return Math.max(m,s.id); }, 0);
+    DB.ahorros.subrubros.push({ id: maxId+1, nombre: nombre });
     save();
     input.value = '';
     gmRefrescarModalSubrubros();
-    gmRenderAhorros();
-    toast('\u2705 Subrubro agregado', 'success');
+    toast('✅ Subrubro agregado', 'success');
 }
 
 function gmEditarSubrubro(id) {
-    const s = DB.ahorros.subrubros.find(x => x.id === id);
+    var s = DB.ahorros.subrubros.find(function(x){ return x.id===id; });
     if (!s) return;
-    const nuevo = prompt('Nuevo nombre para "' + s.nombre + '":', s.nombre);
+    var nuevo = prompt('Nuevo nombre:', s.nombre);
     if (!nuevo || !nuevo.trim()) return;
     s.nombre = nuevo.trim();
     save();
     gmRefrescarModalSubrubros();
-    gmRenderAhorros();
 }
 
 async function gmEliminarSubrubro(id) {
-    const s = DB.ahorros.subrubros.find(x => x.id === id);
-    if (!s) return;
-    if (DB.ahorros.movimientos.some(m => m.subrubroId === id)) {
-        toast('No se puede eliminar: tiene movimientos asociados.', 'error'); return;
+    if (DB.ahorros.movimientos.some(function(m){ return m.subrubroId===id; })) {
+        toast('Tiene movimientos asociados, no se puede eliminar.', 'error'); return;
     }
-    const ok = await showConfirm('Eliminar subrubro', '\u00bfEliminar "' + s.nombre + '"?');
+    var ok = await showConfirm('Eliminar subrubro', '¿Eliminar este subrubro?');
     if (!ok) return;
-    DB.ahorros.subrubros = DB.ahorros.subrubros.filter(x => x.id !== id);
+    DB.ahorros.subrubros = DB.ahorros.subrubros.filter(function(x){ return x.id!==id; });
     save();
     gmRefrescarModalSubrubros();
-    gmRenderAhorros();
-}
-
-function gmAbrirHistorialAhorros() {
-    document.getElementById('modal-ahorros-historial')?.remove();
-    const ov = document.createElement('div');
-    ov.id = 'modal-ahorros-historial';
-    ov.style.cssText = 'position:fixed;inset:0;background:var(--bg1,#f8fafc);z-index:3000;display:flex;flex-direction:column;overflow:hidden;';
-    ov.innerHTML = '<div style="background:var(--bg-card);border-bottom:2px solid var(--border);flex-shrink:0;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">'
-        + '<span style="font-weight:700;font-size:16px;">\ud83d\udccb Historial de Ahorros</span>'
-        + '<button onclick="document.getElementById(\'modal-ahorros-historial\').remove()" style="background:#f1f5f9;color:#334155;border:none;border-radius:6px;padding:6px 16px;font-size:13px;cursor:pointer;font-weight:600;">\u2715 Cerrar</button>'
-        + '</div>'
-        + '<div style="flex:1;overflow-y:auto;padding:12px 16px;"><div id="tabla-historial-ahorros"></div></div>';
-    document.body.appendChild(ov);
-    gmRenderTablaHistorialAhorros();
 }
 
 function gmRenderTablaHistorialAhorros() {
-    const cont = document.getElementById('tabla-historial-ahorros');
+    var cont = document.getElementById('tabla-historial-ahorros');
     if (!cont) return;
-    const movs = [...DB.ahorros.movimientos].sort((a, b) => (b.fecha > a.fecha ? 1 : -1));
-    const saldos = gmSaldosPorSubrubro();
-    const totalGeneral = Object.values(saldos).reduce((a, v) => a + v, 0);
-    const resumen = DB.ahorros.subrubros.map(s =>
-        '<div style="display:inline-flex;flex-direction:column;align-items:center;background:var(--bg-subtle);border:1px solid var(--border);border-radius:8px;padding:8px 16px;margin:0 6px 8px 0;">'
-        + '<span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">' + s.nombre + '</span>'
-        + '<span style="font-size:15px;font-weight:700;color:' + ((saldos[s.id]||0) >= 0 ? 'var(--ingreso)' : 'var(--gasto)') + ';">' + fmt(saldos[s.id]||0) + '</span>'
-        + '</div>'
-    ).join('');
-    if (!movs.length) {
-        cont.innerHTML = '<div style="margin-bottom:14px;">' + resumen + '</div><p style="color:var(--text-muted);padding:20px 0;">Sin movimientos registrados.</p>';
-        return;
-    }
-    let html = '<div style="margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;">' + resumen
-        + '<div style="display:inline-flex;flex-direction:column;align-items:center;background:var(--primary-light);border:2px solid var(--primary);border-radius:8px;padding:8px 16px;margin:0 0 8px 0;">'
-        + '<span style="font-size:10px;color:var(--primary);text-transform:uppercase;font-weight:700;">TOTAL</span>'
-        + '<span style="font-size:15px;font-weight:700;color:var(--primary);">' + fmt(totalGeneral) + '</span>'
-        + '</div></div>'
-        + '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
-        + '<thead><tr style="border-bottom:2px solid var(--border);background:var(--bg-subtle);">'
-        + '<th style="padding:8px 6px;text-align:left;color:var(--text-muted);">Fecha</th>'
-        + '<th style="padding:8px 6px;text-align:left;color:var(--text-muted);">Subrubro</th>'
-        + '<th style="padding:8px 6px;text-align:left;color:var(--text-muted);">Concepto</th>'
-        + '<th style="padding:8px 6px;text-align:right;color:var(--ingreso);">Ingreso</th>'
-        + '<th style="padding:8px 6px;text-align:right;color:var(--gasto);">Retiro</th>'
-        + '<th style="padding:8px 6px;text-align:center;"></th>'
-        + '</tr></thead><tbody>';
-    movs.forEach(m => {
-        const sub = DB.ahorros.subrubros.find(s => s.id === m.subrubroId);
-        const esI = m.tipo === 'ingreso';
-        html += '<tr style="border-bottom:1px solid var(--border);">'
+    var saldos = gmSaldosPorSubrubro();
+    var movs = DB.ahorros.movimientos.slice().sort(function(a,b){ return b.fecha>a.fecha?1:-1; });
+    if (!movs.length) { cont.innerHTML = '<p style="color:var(--text-muted);padding:16px 0;">Sin movimientos aún.</p>'; return; }
+    var rows = movs.map(function(m) {
+        var sub = DB.ahorros.subrubros.find(function(s){ return s.id===m.subrubroId; });
+        var esI = m.tipo==='ingreso';
+        return '<tr style="border-bottom:1px solid var(--border);">'
             + '<td style="padding:8px 6px;color:var(--text-muted);font-size:12px;">' + m.fecha + '</td>'
-            + '<td style="padding:8px 6px;font-weight:600;">' + (sub ? sub.nombre : '-') + '</td>'
-            + '<td style="padding:8px 6px;color:var(--text-muted);">' + (m.concepto || '-') + '</td>'
-            + '<td style="padding:8px 6px;text-align:right;color:var(--ingreso);font-weight:700;">' + (esI ? fmt(m.monto) : '') + '</td>'
-            + '<td style="padding:8px 6px;text-align:right;color:var(--gasto);font-weight:700;">'  + (!esI ? fmt(m.monto) : '') + '</td>'
-            + '<td style="padding:8px 6px;text-align:center;">'
-            + '<button onclick="gmEliminarAhorro(' + m.id + ')" style="background:none;border:1px solid var(--gasto);border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--gasto);">\u2715</button>'
-            + '</td></tr>';
+            + '<td style="padding:8px 6px;font-weight:600;">' + (sub?sub.nombre:'-') + '</td>'
+            + '<td style="padding:8px 6px;color:var(--text-muted);">' + (m.concepto||'-') + '</td>'
+            + '<td style="padding:8px 6px;text-align:right;color:var(--ingreso);font-weight:700;">' + (esI?fmt(m.monto):'') + '</td>'
+            + '<td style="padding:8px 6px;text-align:right;color:var(--gasto);font-weight:700;">' + (!esI?fmt(m.monto):'') + '</td>'
+            + '<td style="padding:8px 6px;text-align:center;"><button data-elim="' + m.id + '" style="background:none;border:1px solid var(--gasto);border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--gasto);">✕</button></td></tr>';
+    }).join('');
+    cont.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);background:var(--bg-subtle);"><th style="padding:8px 6px;text-align:left;color:var(--text-muted);">Fecha</th><th style="padding:8px 6px;text-align:left;color:var(--text-muted);">Subrubro</th><th style="padding:8px 6px;text-align:left;color:var(--text-muted);">Concepto</th><th style="padding:8px 6px;text-align:right;color:var(--ingreso);">Ingreso</th><th style="padding:8px 6px;text-align:right;color:var(--gasto);">Retiro</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+    cont.querySelectorAll('[data-elim]').forEach(function(btn){
+        btn.addEventListener('click', function(){ gmEliminarAhorro(parseInt(btn.dataset.elim)); });
     });
-    html += '</tbody></table>';
-    cont.innerHTML = html;
 }
 
 function gmAbrirHistorial() {
