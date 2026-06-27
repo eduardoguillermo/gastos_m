@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.42 · Ledger Edition</div>
+    <div class="splash-version">v13.43 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -604,6 +604,57 @@
         </div>
     </div>
 
+    <!-- PANEL AHORROS COLAPSABLE -->
+    <div id="panel-ahorros" style="margin:8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card);box-shadow:var(--shadow-sm);overflow:hidden;">
+        <div id="ahorros-header" onclick="gmToggleAhorros()" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;user-select:none;background:var(--bg-card);">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:15px;">💰</span>
+                <span style="font-weight:700;font-size:13px;color:var(--text-main);">Ahorros</span>
+                <span id="ahorros-total-header" style="font-size:13px;font-weight:700;color:var(--ingreso);">$0</span>
+            </div>
+            <span id="ahorros-chevron" style="font-size:12px;color:var(--text-muted);transition:transform 0.2s;">▼</span>
+        </div>
+        <div id="ahorros-body" style="display:none;border-top:1px solid var(--border);padding:12px 14px;">
+            <!-- Saldos por subrubro -->
+            <div id="ahorros-saldos" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;"></div>
+            <!-- Formulario -->
+            <div style="background:var(--bg-subtle);border-radius:8px;padding:10px;margin-bottom:10px;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+                    <div style="flex:1;min-width:100px;">
+                        <label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Subrubro</label>
+                        <select id="ah-subrubro" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:12px;"></select>
+                    </div>
+                    <div style="flex:1;min-width:80px;">
+                        <label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Tipo</label>
+                        <select id="ah-tipo" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:12px;">
+                            <option value="ingreso">⬆️ Ingreso</option>
+                            <option value="retiro">⬇️ Retiro</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;min-width:80px;">
+                        <label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Monto</label>
+                        <input id="ah-monto" type="number" min="0" step="any" placeholder="0" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:12px;">
+                    </div>
+                    <div style="flex:1;min-width:80px;">
+                        <label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Concepto</label>
+                        <input id="ah-concepto" type="text" placeholder="Opcional" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:12px;">
+                    </div>
+                    <div style="flex:1;min-width:90px;">
+                        <label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Fecha</label>
+                        <input id="ah-fecha" type="date" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:12px;">
+                    </div>
+                    <button onclick="gmGuardarAhorro()" style="padding:6px 14px;background:var(--ingreso);color:white;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">✓ Guardar</button>
+                </div>
+            </div>
+            <!-- Botones subrubros e historial -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button onclick="gmAbrirSubrubros()" style="padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text-muted);cursor:pointer;">⚙️ Subrubros</button>
+                <button onclick="gmAbrirHistorialAhorros()" style="padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text-muted);cursor:pointer;">📋 Historial</button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- FOOTER -->
     <footer>
         <div class="footer-left">
@@ -633,7 +684,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.42';
+const APP_VERSION = '13.43';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -896,7 +947,15 @@ let DB = {
         debito2:  'Banco 2',
         debito3:  ''           // opcional; vacío = oculta
     },
-    presupuestosHistoricos: {}
+    presupuestosHistoricos: {},
+    ahorros: {
+        subrubros: [
+            { id: 1, nombre: 'Cambio Auto' },
+            { id: 2, nombre: 'Reservas' }
+        ],
+        movimientos: [],
+        nid: 1
+    }
 };
 
 let _saveTimer          = null;
@@ -967,6 +1026,10 @@ function migrar(data) {
     data.rubros       = Array.isArray(data.rubros)       ? data.rubros       : [];
     data.movimientos  = Array.isArray(data.movimientos)  ? data.movimientos  : [];
     data.presupuestosHistoricos = data.presupuestosHistoricos || {};
+    if (!data.ahorros) data.ahorros = { subrubros: [{id:1,nombre:'Cambio Auto'},{id:2,nombre:'Reservas'}], movimientos: [], nid: 1 };
+    if (!data.ahorros.subrubros)   data.ahorros.subrubros   = [{id:1,nombre:'Cambio Auto'},{id:2,nombre:'Reservas'}];
+    if (!data.ahorros.movimientos) data.ahorros.movimientos = [];
+    if (!data.ahorros.nid)         data.ahorros.nid         = 1;
 
     if (data.version <= 9) {
         data.movimientos.forEach(m => {
@@ -2302,6 +2365,7 @@ function render() {
     // ── Reporte mensual ──
     actualizarRubrosRapidos();
     renderTop5Rubros();
+    gmRenderAhorrosHeader();
     const listaReporte = document.getElementById('lista-reporte-mensual');
     listaReporte.innerHTML = '';
     const mesesOrdenados = Object.keys(metricas.mapaMensual).sort().reverse();
