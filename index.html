@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.62 · Ledger Edition</div>
+    <div class="splash-version">v13.63 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -642,7 +642,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.62';
+const APP_VERSION = '13.63';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1378,17 +1378,27 @@ function gmRenderFijos() {
 
 
 function gmMesVenc(dia, hoy, mesActual) {
-    // Si el día de vencimiento ya pasó este mes, usar el mes siguiente
     var vencEstesMes = mesActual + '-' + String(dia).padStart(2,'0');
     var diasEste = Math.round((new Date(vencEstesMes) - new Date(hoy)) / 86400000);
     if (diasEste < 0) {
-        // Ya pasó — calcular mes siguiente
         var d = new Date(hoy + 'T00:00:00');
         d.setDate(1);
         d.setMonth(d.getMonth() + 1);
         return d.toISOString().slice(0,7);
     }
     return mesActual;
+}
+
+function gmProxVenc(dia, hoy) {
+    // Calcular la próxima fecha de vencimiento para el día dado
+    var mesActual = hoy.slice(0,7);
+    var vencEste = mesActual + '-' + String(dia).padStart(2,'0');
+    if (vencEste >= hoy) return vencEste;
+    // Ya pasó — mes siguiente
+    var d = new Date(hoy + 'T00:00:00');
+    d.setDate(1);
+    d.setMonth(d.getMonth() + 1);
+    return d.toISOString().slice(0,7) + '-' + String(dia).padStart(2,'0');
 }
 
 function gmRenderServicios() {
@@ -1407,9 +1417,9 @@ function gmRenderServicios() {
     var mesActual = hoy.slice(0,7);
 
     var rows = svcs.map(function(s) {
-        var mesPago = gmMesVenc(s.dia, hoy, mesActual);
+        var venc = s.fechaVenc && s.fechaVenc >= hoy ? s.fechaVenc : gmProxVenc(s.dia, hoy);
+        var mesPago = venc.slice(0,7);
         var pagoMes = s.pagos && s.pagos[mesPago];
-        var venc = mesPago + '-' + String(s.dia).padStart(2,'0');
         var dias = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
         var semaforo = pagoMes ? '#059669' : (dias < 0 ? '#dc2626' : dias <= 2 ? '#d97706' : '#64748b');
         var estadoTxt = pagoMes ? '✅ Pagado ' + pagoMes : (dias < 0 ? '⚠️ Vencido' : 'Vence día ' + s.dia);
@@ -1571,8 +1581,8 @@ function gmRenderCuotas() {
     var mesActual = hoy.slice(0,7);
 
     var rows = cuotas.map(function(c) {
-        var mesPagoC = gmMesVenc(c.dia, hoy, mesActual);
-        var venc = mesPagoC + '-' + String(c.dia).padStart(2,'0');
+        var venc = c.fechaVenc && c.fechaVenc >= hoy ? c.fechaVenc : gmProxVenc(c.dia, hoy);
+        var mesPagoC = venc.slice(0,7);
         var dias = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
         var pagadaMes = c.pagos && c.pagos[mesActual];
         var semaforo = pagadaMes ? '#059669' : (dias < 0 ? '#dc2626' : dias <= 2 ? '#d97706' : '#64748b');
@@ -1654,8 +1664,8 @@ function gmAbrirFormCuota(id) {
         + '<div style="display:flex;gap:8px;margin-bottom:10px;">'
         + '<div style="flex:1;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Monto/cuota ($)</label>'
         + '<input id="cuota-monto" type="number" min="0" value="' + (c ? c.monto : '') + '" placeholder="0" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;box-sizing:border-box;"></div>'
-        + '<div style="width:70px;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Día venc.</label>'
-        + '<input id="cuota-dia" type="number" min="1" max="31" value="' + (c ? c.dia : '') + '" placeholder="15" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;box-sizing:border-box;"></div>'
+        + '<div style="flex:1;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Próx. vencimiento</label>'
+        + '<input id="cuota-fecha" type="date" value="' + (c ? (c.fechaVenc||''): '') + '" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-main);font-size:13px;box-sizing:border-box;"></div>'
         + '</div>'
         + '<div style="display:flex;gap:8px;margin-bottom:14px;">'
         + '<div style="flex:1;"><label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:3px;">Cuota actual</label>'
@@ -1670,20 +1680,21 @@ function gmAbrirFormCuota(id) {
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
     document.getElementById('btn-cerrar-form-cuota').addEventListener('click', function(){ ov.remove(); });
     document.getElementById('btn-guardar-cuota').addEventListener('click', function() {
-        var nombre  = document.getElementById('cuota-nombre').value.trim();
-        var monto   = parseFloat(document.getElementById('cuota-monto').value);
-        var dia     = parseInt(document.getElementById('cuota-dia').value);
-        var actual  = parseInt(document.getElementById('cuota-actual').value);
-        var total   = parseInt(document.getElementById('cuota-total').value);
+        var nombre    = document.getElementById('cuota-nombre').value.trim();
+        var monto     = parseFloat(document.getElementById('cuota-monto').value);
+        var fechaVenc = document.getElementById('cuota-fecha').value;
+        var actual    = parseInt(document.getElementById('cuota-actual').value);
+        var total     = parseInt(document.getElementById('cuota-total').value);
         if (!nombre) { toast('Ingresá el nombre.', 'error'); return; }
         if (isNaN(monto) || monto < 0) { toast('Monto inválido.', 'error'); return; }
-        if (isNaN(dia) || dia < 1 || dia > 31) { toast('Día inválido (1-31).', 'error'); return; }
+        if (!fechaVenc) { toast('Seleccioná la fecha de vencimiento.', 'error'); return; }
         if (isNaN(actual) || actual < 1) { toast('Cuota actual inválida.', 'error'); return; }
         if (isNaN(total) || total < 1) { toast('Total de cuotas inválido.', 'error'); return; }
+        var dia = parseInt(fechaVenc.slice(8,10));
         if (c) {
-            c.nombre = nombre; c.monto = monto; c.dia = dia; c.cuotaActual = actual; c.cuotasTotal = total;
+            c.nombre = nombre; c.monto = monto; c.dia = dia; c.fechaVenc = fechaVenc; c.cuotaActual = actual; c.cuotasTotal = total;
         } else {
-            DB.fijos.cuotas.push({ id: DB.fijos.nid++, nombre: nombre, monto: monto, dia: dia, cuotaActual: actual, cuotasTotal: total, pagos: {} });
+            DB.fijos.cuotas.push({ id: DB.fijos.nid++, nombre: nombre, monto: monto, dia: dia, fechaVenc: fechaVenc, cuotaActual: actual, cuotasTotal: total, pagos: {} });
         }
         save();
         ov.remove();
@@ -1743,8 +1754,7 @@ function gmMostrarVencimientos() {
     DB.fijos.servicios.forEach(function(s) {
         if (s.pagos && s.pagos[mesActual]) return;
         if (idsEnMesAnt['servicio_' + s.id]) return; // ya en mes anterior
-        var mesSvc = gmMesVenc(s.dia, hoy, mesActual);
-        var venc = mesSvc + '-' + String(s.dia).padStart(2,'0');
+        var venc = s.fechaVenc && s.fechaVenc >= hoy ? s.fechaVenc : gmProxVenc(s.dia, hoy);
         var diasRestantes = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
         if (proxDias.indexOf(venc) !== -1 || diasRestantes < 0) {
             items.push({ id: s.id, nombre: s.nombre, monto: s.monto, venc: venc, dias: diasRestantes, tipo: 'Servicio', tipoObj: 'servicio' });
@@ -1755,8 +1765,7 @@ function gmMostrarVencimientos() {
     DB.fijos.cuotas.filter(function(c){ return c.cuotaActual <= c.cuotasTotal; }).forEach(function(c) {
         if (c.pagos && c.pagos[mesActual]) return;
         if (idsEnMesAnt['cuota_' + c.id]) return; // ya en mes anterior
-        var mesCuota = gmMesVenc(c.dia, hoy, mesActual);
-        var venc = mesCuota + '-' + String(c.dia).padStart(2,'0');
+        var venc = c.fechaVenc && c.fechaVenc >= hoy ? c.fechaVenc : gmProxVenc(c.dia, hoy);
         var diasRestantes = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
         if (proxDias.indexOf(venc) !== -1 || diasRestantes < 0) {
             items.push({ id: c.id, nombre: c.nombre + ' (' + c.cuotaActual + '/' + c.cuotasTotal + ')', monto: c.monto, venc: venc, dias: diasRestantes, tipo: 'Cuota', tipoObj: 'cuota' });
