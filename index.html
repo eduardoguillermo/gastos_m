@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.56 · Ledger Edition</div>
+    <div class="splash-version">v13.57 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -642,7 +642,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.56';
+const APP_VERSION = '13.57';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1094,8 +1094,9 @@ function getCuentas() {
     return lista;
 }
 function labelCuenta(key) {
+    if (!key) return '?';
     const c = getCuentas().find(x => x.key === key);
-    return c ? c.label : key;
+    return c ? c.label : (key || '?');
 }
 
 // ════════════════════════════════════════════════════
@@ -2913,8 +2914,8 @@ function render() {
             const nRubro = m.rubroId === 0 ? 'Traspaso' : (rubro?.nombre || 'S/R');
             const signo  = tipo === 'gasto' ? '-' : tipo === 'ingreso' ? '+' : '⇅';
             const medio  = tipo === 'transferencia'
-                ? `<span class="badge wallet">${labelCuenta(m.origen).slice(0,6)}→${labelCuenta(m.destino).slice(0,6)}</span>`
-                : `<span class="badge wallet">${labelCuenta(m.origen)}</span>`;
+                ? `<span class="badge wallet">${(labelCuenta(m.origen)||'').slice(0,6)}→${(labelCuenta(m.destino)||'').slice(0,6)}</span>`
+                : `<span class="badge wallet">${labelCuenta(m.origen)||''}</span>`;
 
             const div = document.createElement('div');
             div.className = 'mov-row';
