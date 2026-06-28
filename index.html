@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.67 · Ledger Edition</div>
+    <div class="splash-version">v13.68 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -642,7 +642,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.67';
+const APP_VERSION = '13.68';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1757,28 +1757,28 @@ function gmMostrarVencimientos() {
 
     // Para cada servicio, calcular su próximo vencimiento real
     DB.fijos.servicios.forEach(function(s) {
-        // Calcular próximo vencimiento basado en fechaVenc o dia
         var venc = s.fechaVenc && s.fechaVenc >= hoy ? s.fechaVenc : gmProxVenc(s.dia, hoy);
         var mesPago = venc.slice(0,7);
         var pagoMes = s.pagos && s.pagos[mesPago];
-        if (pagoMes) return; // ya pagado para ese vencimiento
+        if (pagoMes) return; // ya pagado
 
-        // Verificar si hay un vencimiento del mes anterior sin pagar
-        var vencAnt = s.pagos ? null : null;
-        // Buscar si existe pago del mes anterior
-        var pagoAnt = s.pagos && s.pagos[mesAnterior];
-        if (!pagoAnt) {
-            // Construir fecha del vencimiento del mes anterior
-            var vencAntDate = mesAnterior + '-' + String(s.dia).padStart(2,'0');
-            var diasAnt = Math.round((new Date(vencAntDate + 'T12:00:00') - new Date(hoy + 'T12:00:00')) / 86400000);
-            if (diasAnt < 0) {
-                // Venció el mes anterior y no está pagado
-                items.push({ id: s.id, nombre: s.nombre, monto: s.monto, venc: vencAntDate, dias: diasAnt, tipo: 'Servicio', tipoObj: 'servicio', mesAnt: true });
-                return; // No agregar también el mes actual
+        // Solo mostrar "mes anterior" si el servicio ya existía en ese mes
+        // (fechaVenc debe ser <= fin del mes anterior)
+        var finMesAnt = mesAnterior + '-31';
+        var tieneMesAnt = !s.fechaVenc || s.fechaVenc.slice(0,7) <= mesAnterior;
+        if (tieneMesAnt) {
+            var pagoAnt = s.pagos && s.pagos[mesAnterior];
+            if (!pagoAnt) {
+                var vencAntDate = mesAnterior + '-' + String(s.dia).padStart(2,'0');
+                var diasAnt = Math.round((new Date(vencAntDate + 'T12:00:00') - new Date(hoy + 'T12:00:00')) / 86400000);
+                if (diasAnt < 0) {
+                    items.push({ id: s.id, nombre: s.nombre, monto: s.monto, venc: vencAntDate, dias: diasAnt, tipo: 'Servicio', tipoObj: 'servicio', mesAnt: true });
+                    return;
+                }
             }
         }
 
-        // Vencimiento del mes actual / próximo
+        // Vencimiento próximo
         var diasRestantes = Math.round((new Date(venc + 'T12:00:00') - new Date(hoy + 'T12:00:00')) / 86400000);
         if (proxDias.indexOf(venc) !== -1 || diasRestantes < 0) {
             items.push({ id: s.id, nombre: s.nombre, monto: s.monto, venc: venc, dias: diasRestantes, tipo: 'Servicio', tipoObj: 'servicio' });
@@ -1792,13 +1792,16 @@ function gmMostrarVencimientos() {
         var pagoMes = c.pagos && c.pagos[mesPago];
         if (pagoMes) return;
 
-        var pagoAnt = c.pagos && c.pagos[mesAnterior];
-        if (!pagoAnt) {
-            var vencAntDate = mesAnterior + '-' + String(c.dia).padStart(2,'0');
-            var diasAnt = Math.round((new Date(vencAntDate + 'T12:00:00') - new Date(hoy + 'T12:00:00')) / 86400000);
-            if (diasAnt < 0) {
-                items.push({ id: c.id, nombre: c.nombre + ' (' + c.cuotaActual + '/' + c.cuotasTotal + ')', monto: c.monto, venc: vencAntDate, dias: diasAnt, tipo: 'Cuota', tipoObj: 'cuota', mesAnt: true });
-                return;
+        var tieneMesAnt = !c.fechaVenc || c.fechaVenc.slice(0,7) <= mesAnterior;
+        if (tieneMesAnt) {
+            var pagoAnt = c.pagos && c.pagos[mesAnterior];
+            if (!pagoAnt) {
+                var vencAntDate = mesAnterior + '-' + String(c.dia).padStart(2,'0');
+                var diasAnt = Math.round((new Date(vencAntDate + 'T12:00:00') - new Date(hoy + 'T12:00:00')) / 86400000);
+                if (diasAnt < 0) {
+                    items.push({ id: c.id, nombre: c.nombre + ' (' + c.cuotaActual + '/' + c.cuotasTotal + ')', monto: c.monto, venc: vencAntDate, dias: diasAnt, tipo: 'Cuota', tipoObj: 'cuota', mesAnt: true });
+                    return;
+                }
             }
         }
 
