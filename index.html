@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.57 · Ledger Edition</div>
+    <div class="splash-version">v13.58 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -642,7 +642,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.57';
+const APP_VERSION = '13.58';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1694,11 +1694,33 @@ function gmMostrarVencimientos() {
     var proxDias = [hoy].concat(gmDiasHabilesDesde(hoy, 5));
     var mesActual = hoy.slice(0,7);
 
+    // Mes anterior
+    var dMesAnt = new Date(hoy + 'T00:00:00');
+    dMesAnt.setDate(1);
+    dMesAnt.setMonth(dMesAnt.getMonth() - 1);
+    var mesAnterior = dMesAnt.toISOString().slice(0,7);
+
     var items = [];
 
-    // Servicios fijos
+    // Servicios fijos — mes anterior sin pagar
     DB.fijos.servicios.forEach(function(s) {
-        if (s.pagos && s.pagos[mesActual]) return; // ya pagado
+        if (s.pagos && s.pagos[mesAnterior]) return; // ya pagado el mes pasado
+        var venc = mesAnterior + '-' + String(s.dia).padStart(2,'0');
+        var diasRestantes = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
+        items.push({ nombre: s.nombre, monto: s.monto, venc: venc, dias: diasRestantes, tipo: 'Servicio', mesAnt: true });
+    });
+
+    // Cuotas — mes anterior sin pagar
+    DB.fijos.cuotas.filter(function(c){ return c.cuotaActual <= c.cuotasTotal; }).forEach(function(c) {
+        if (c.pagos && c.pagos[mesAnterior]) return;
+        var venc = mesAnterior + '-' + String(c.dia).padStart(2,'0');
+        var diasRestantes = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
+        items.push({ nombre: c.nombre + ' (' + c.cuotaActual + '/' + c.cuotasTotal + ')', monto: c.monto, venc: venc, dias: diasRestantes, tipo: 'Cuota', mesAnt: true });
+    });
+
+    // Servicios fijos — mes actual
+    DB.fijos.servicios.forEach(function(s) {
+        if (s.pagos && s.pagos[mesActual]) return;
         var venc = mesActual + '-' + String(s.dia).padStart(2,'0');
         var diasRestantes = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
         if (proxDias.indexOf(venc) !== -1 || diasRestantes < 0) {
@@ -1706,7 +1728,7 @@ function gmMostrarVencimientos() {
         }
     });
 
-    // Cuotas
+    // Cuotas — mes actual
     DB.fijos.cuotas.filter(function(c){ return c.cuotaActual <= c.cuotasTotal; }).forEach(function(c) {
         if (c.pagos && c.pagos[mesActual]) return;
         var venc = mesActual + '-' + String(c.dia).padStart(2,'0');
@@ -1724,8 +1746,8 @@ function gmMostrarVencimientos() {
     if (existing) existing.remove();
 
     var rows = items.map(function(it) {
-        var color = it.dias < 0 ? '#dc2626' : it.dias === 0 ? '#d97706' : it.dias <= 2 ? '#d97706' : '#ca8a04';
-        var badge = it.dias < 0 ? 'Vencido' : it.dias === 0 ? 'Hoy' : 'En ' + it.dias + ' día' + (it.dias===1?'':'s');
+        var color = it.mesAnt ? '#7c3aed' : (it.dias < 0 ? '#dc2626' : it.dias === 0 ? '#d97706' : it.dias <= 2 ? '#d97706' : '#ca8a04');
+        var badge = it.mesAnt ? 'Mes ant.' : (it.dias < 0 ? 'Vencido' : it.dias === 0 ? 'Hoy' : 'En ' + it.dias + ' día' + (it.dias===1?'':'s'));
         return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-subtle);border-left:3px solid ' + color + ';">'
             + '<div style="flex:1;min-width:0;">'
             + '<div style="font-size:13px;font-weight:700;color:var(--text-main);">' + it.nombre + '</div>'
