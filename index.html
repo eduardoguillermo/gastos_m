@@ -2,18 +2,13 @@
 function eliminarMovimiento(id) {
     showConfirm('Eliminar asiento', '¿Remover este movimiento del libro diario?', 'Eliminar').then(function(ok) {
         if (!ok) return;
-        // Si es pago de fijo, revertir estado
+        // Si es pago de fijo: eliminar el fijo/cuota Y revertir el pago
         var mov = DB.movimientos.find(function(m){ return m.id === id; });
-        if (mov && mov.fijoId && mov.fijoTipo && mov.fijoMes) {
+        if (mov && mov.fijoId && mov.fijoTipo) {
             if (mov.fijoTipo === 'servicio') {
-                var svc = DB.fijos.servicios.find(function(s){ return s.id === mov.fijoId; });
-                if (svc && svc.pagos) delete svc.pagos[mov.fijoMes];
+                DB.fijos.servicios = DB.fijos.servicios.filter(function(s){ return s.id !== mov.fijoId; });
             } else if (mov.fijoTipo === 'cuota') {
-                var cuota = DB.fijos.cuotas.find(function(c){ return c.id === mov.fijoId; });
-                if (cuota && cuota.pagos) {
-                    delete cuota.pagos[mov.fijoMes];
-                    if (cuota.cuotaActual > 1) cuota.cuotaActual--;
-                }
+                DB.fijos.cuotas = DB.fijos.cuotas.filter(function(c){ return c.id !== mov.fijoId; });
             }
         }
         DB.movimientos = DB.movimientos.filter(function(m){ return m.id !== id; });
@@ -346,7 +341,7 @@ function eliminarMovimiento(id) {
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version" style="display:flex;align-items:baseline;gap:8px;justify-content:center;">v13.72 · Ledger Edition <span style="font-family:'Dancing Script',cursive;font-size:17px;color:#93c5fd;">especial para Mariela</span></div>
+    <div class="splash-version" style="display:flex;align-items:baseline;gap:8px;justify-content:center;">v13.73 · Ledger Edition <span style="font-family:'Dancing Script',cursive;font-size:17px;color:#93c5fd;">especial para Mariela</span></div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -629,7 +624,7 @@ function eliminarMovimiento(id) {
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.72';
+const APP_VERSION = '13.73';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
