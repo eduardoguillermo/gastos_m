@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.60 · Ledger Edition</div>
+    <div class="splash-version">v13.61 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -642,7 +642,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.60';
+const APP_VERSION = '13.61';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1774,11 +1774,12 @@ function gmMostrarVencimientos() {
         + '</div>'
         + '<div style="padding:14px 16px;max-height:70vh;overflow-y:auto;">' + rows + '</div>'
         + '<div style="padding:12px 16px;border-top:1px solid var(--border);">'
-        + '<button id="btn-ir-fijos" style="width:100%;padding:8px;background:var(--primary);color:white;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">Ver tab Fijos</button>'
+        + '<button id="btn-cerrar-venc-footer" style="width:100%;padding:8px;background:var(--bg-subtle);color:var(--text-main);border:1px solid var(--border);border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;">✕ Cerrar</button>'
         + '</div></div>';
 
     document.body.appendChild(ov);
     document.getElementById('btn-cerrar-venc').addEventListener('click', function(){ ov.remove(); });
+    document.getElementById('btn-cerrar-venc-footer').addEventListener('click', function(){ ov.remove(); });
     // Listeners para botones Pagar
     ov.querySelectorAll('[data-id][data-tipo]').forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -1789,16 +1790,7 @@ function gmMostrarVencimientos() {
             else                     gmPagarCuota(id);
         });
     });
-    document.getElementById('btn-ir-fijos').addEventListener('click', function(){
-        ov.remove();
-        // Activar tab Fijos
-        document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
-        document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
-        var tabBtn = document.querySelector('[data-tab="tab-fijos"]');
-        var tabContent = document.getElementById('tab-fijos');
-        if (tabBtn) tabBtn.classList.add('active');
-        if (tabContent) { tabContent.classList.add('active'); gmRenderFijos(); }
-    });
+
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
 }
 
