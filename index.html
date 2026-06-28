@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.61 · Ledger Edition</div>
+    <div class="splash-version">v13.62 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -642,7 +642,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.61';
+const APP_VERSION = '13.62';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1376,6 +1376,21 @@ function gmRenderFijos() {
 
 // ── SERVICIOS FIJOS ───────────────────────────────────────────────────────
 
+
+function gmMesVenc(dia, hoy, mesActual) {
+    // Si el día de vencimiento ya pasó este mes, usar el mes siguiente
+    var vencEstesMes = mesActual + '-' + String(dia).padStart(2,'0');
+    var diasEste = Math.round((new Date(vencEstesMes) - new Date(hoy)) / 86400000);
+    if (diasEste < 0) {
+        // Ya pasó — calcular mes siguiente
+        var d = new Date(hoy + 'T00:00:00');
+        d.setDate(1);
+        d.setMonth(d.getMonth() + 1);
+        return d.toISOString().slice(0,7);
+    }
+    return mesActual;
+}
+
 function gmRenderServicios() {
     var cont = document.getElementById('fijos-lista');
     if (!cont) return;
@@ -1392,8 +1407,9 @@ function gmRenderServicios() {
     var mesActual = hoy.slice(0,7);
 
     var rows = svcs.map(function(s) {
-        var pagoMes = s.pagos && s.pagos[mesActual];
-        var venc = mesActual + '-' + String(s.dia).padStart(2,'0');
+        var mesPago = gmMesVenc(s.dia, hoy, mesActual);
+        var pagoMes = s.pagos && s.pagos[mesPago];
+        var venc = mesPago + '-' + String(s.dia).padStart(2,'0');
         var dias = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
         var semaforo = pagoMes ? '#059669' : (dias < 0 ? '#dc2626' : dias <= 2 ? '#d97706' : '#64748b');
         var estadoTxt = pagoMes ? '✅ Pagado ' + pagoMes : (dias < 0 ? '⚠️ Vencido' : 'Vence día ' + s.dia);
@@ -1555,7 +1571,8 @@ function gmRenderCuotas() {
     var mesActual = hoy.slice(0,7);
 
     var rows = cuotas.map(function(c) {
-        var venc = mesActual + '-' + String(c.dia).padStart(2,'0');
+        var mesPagoC = gmMesVenc(c.dia, hoy, mesActual);
+        var venc = mesPagoC + '-' + String(c.dia).padStart(2,'0');
         var dias = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
         var pagadaMes = c.pagos && c.pagos[mesActual];
         var semaforo = pagadaMes ? '#059669' : (dias < 0 ? '#dc2626' : dias <= 2 ? '#d97706' : '#64748b');
@@ -1726,7 +1743,8 @@ function gmMostrarVencimientos() {
     DB.fijos.servicios.forEach(function(s) {
         if (s.pagos && s.pagos[mesActual]) return;
         if (idsEnMesAnt['servicio_' + s.id]) return; // ya en mes anterior
-        var venc = mesActual + '-' + String(s.dia).padStart(2,'0');
+        var mesSvc = gmMesVenc(s.dia, hoy, mesActual);
+        var venc = mesSvc + '-' + String(s.dia).padStart(2,'0');
         var diasRestantes = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
         if (proxDias.indexOf(venc) !== -1 || diasRestantes < 0) {
             items.push({ id: s.id, nombre: s.nombre, monto: s.monto, venc: venc, dias: diasRestantes, tipo: 'Servicio', tipoObj: 'servicio' });
@@ -1737,7 +1755,8 @@ function gmMostrarVencimientos() {
     DB.fijos.cuotas.filter(function(c){ return c.cuotaActual <= c.cuotasTotal; }).forEach(function(c) {
         if (c.pagos && c.pagos[mesActual]) return;
         if (idsEnMesAnt['cuota_' + c.id]) return; // ya en mes anterior
-        var venc = mesActual + '-' + String(c.dia).padStart(2,'0');
+        var mesCuota = gmMesVenc(c.dia, hoy, mesActual);
+        var venc = mesCuota + '-' + String(c.dia).padStart(2,'0');
         var diasRestantes = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
         if (proxDias.indexOf(venc) !== -1 || diasRestantes < 0) {
             items.push({ id: c.id, nombre: c.nombre + ' (' + c.cuotaActual + '/' + c.cuotasTotal + ')', monto: c.monto, venc: venc, dias: diasRestantes, tipo: 'Cuota', tipoObj: 'cuota' });
