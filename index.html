@@ -359,7 +359,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version">v13.65 · Ledger Edition</div>
+    <div class="splash-version">v13.66 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">Development by Guille</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -642,7 +642,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.65';
+const APP_VERSION = '13.66';
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
 const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1389,6 +1389,13 @@ function gmMesVenc(dia, hoy, mesActual) {
     return mesActual;
 }
 
+function gmFmtFecha(iso) {
+    // Formatea YYYY-MM-DD como DD/MM/YY sin pasar por Date (evita bug UTC)
+    if (!iso || iso.length < 10) return iso || '';
+    var p = iso.split('-');
+    return p[2] + '/' + p[1] + '/' + p[0].slice(2);
+}
+
 function gmProxVenc(dia, hoy) {
     // Calcular la próxima fecha de vencimiento para el día dado
     var mesActual = hoy.slice(0,7);
@@ -1422,7 +1429,7 @@ function gmRenderServicios() {
         var pagoMes = s.pagos && s.pagos[mesPago];
         var dias = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
         var semaforo = pagoMes ? '#059669' : (dias < 0 ? '#dc2626' : dias <= 2 ? '#d97706' : '#64748b');
-        var estadoTxt = pagoMes ? '✅ Pagado ' + pagoMes : (dias < 0 ? '⚠️ Vencido ' + venc : 'Vence ' + venc);
+        var estadoTxt = pagoMes ? '✅ Pagado ' + gmFmtFecha(pagoMes) : (dias < 0 ? '⚠️ Vencido ' + gmFmtFecha(venc) : 'Vence ' + gmFmtFecha(venc));
         return '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;background:var(--bg-subtle);margin-bottom:5px;border-left:3px solid ' + semaforo + ';">'
             + '<div style="flex:1;min-width:0;">'
             + '<div style="font-size:12px;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + s.nombre + '</div>'
@@ -1595,7 +1602,7 @@ function gmRenderCuotas() {
         var dias = Math.round((new Date(venc) - new Date(hoy)) / 86400000);
         var pagadaMes = c.pagos && c.pagos[mesActual];
         var semaforo = pagadaMes ? '#059669' : (dias < 0 ? '#dc2626' : dias <= 2 ? '#d97706' : '#64748b');
-        var estadoTxt = pagadaMes ? '✅ Pagada' : (dias < 0 ? '⚠️ Vencida ' + venc : 'Vence ' + venc);
+        var estadoTxt = pagadaMes ? '✅ Pagada' : (dias < 0 ? '⚠️ Vencida ' + gmFmtFecha(venc) : 'Vence ' + gmFmtFecha(venc));
         var progreso = Math.round((c.cuotaActual - 1) / c.cuotasTotal * 100);
         return '<div style="padding:7px 8px;border-radius:6px;background:var(--bg-subtle);margin-bottom:5px;border-left:3px solid ' + semaforo + ';">'
             + '<div style="display:flex;align-items:center;gap:8px;">'
@@ -1804,7 +1811,7 @@ function gmMostrarVencimientos() {
         return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-subtle);border-left:3px solid ' + color + ';">'
             + '<div style="flex:1;min-width:0;">'
             + '<div style="font-size:13px;font-weight:700;color:var(--text-main);">' + it.nombre + '</div>'
-            + '<div style="font-size:11px;color:var(--text-muted);">' + it.tipo + ' · ' + fmt(it.monto) + ' · vence ' + it.venc + '</div>'
+            + '<div style="font-size:11px;color:var(--text-muted);">' + it.tipo + ' · ' + fmt(it.monto) + ' · vence ' + gmFmtFecha(it.venc) + '</div>'
             + '</div>'
             + '<span style="font-size:11px;font-weight:700;color:white;background:' + color + ';padding:3px 8px;border-radius:10px;white-space:nowrap;">' + badge + '</span>'
             + '<button data-id="' + it.id + '" data-tipo="' + it.tipoObj + '" style="background:var(--ingreso);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">Pagar</button>'
