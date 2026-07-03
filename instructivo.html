@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinanzasPro Ledger · Manual de Usuario</title>
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-light: #eef2ff;
+    --green: #10b981;
+    --green-light: #ecfdf5;
+    --amber: #f59e0b;
+    --amber-light: #fffbeb;
+    --red: #ef4444;
+    --red-light: #fef2f2;
+    --teal: #0f766e;
+    --teal-light: #f0fdfa;
+    --blue: #0284c7;
+    --blue-light: #f0f9ff;
+    --purple: #a855f7;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --sidebar-w: 260px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; }
+
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: var(--sidebar-w);
+    background: #1e293b;
+    color: #cbd5e1;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    overflow-y: auto;
+    padding: 0 0 32px 0;
+    z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid #334155;
+    margin-bottom: 8px;
+  }
+  .sidebar-logo h1 { font-size: 16px; font-weight: 700; color: white; }
+  .sidebar-logo p { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .sidebar a {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 20px;
+    color: #94a3b8;
+    text-decoration: none;
+    font-size: 13px;
+    border-left: 3px solid transparent;
+    transition: all .15s;
+  }
+  .sidebar a:hover, .sidebar a.active {
+    color: white;
+    background: #0f172a;
+    border-left-color: var(--primary);
+  }
+  .sidebar .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: #475569;
+    padding: 16px 20px 4px;
+  }
+  .content {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    max-width: 860px;
+    padding: 40px 48px 80px;
+  }
+
+  .section { margin-bottom: 64px; scroll-margin-top: 24px; }
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+  }
+  .section-icon { font-size: 28px; }
+  .section-title { font-size: 22px; font-weight: 700; color: var(--text); }
+  .section-subtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  h2 { font-size: 17px; font-weight: 700; margin: 28px 0 10px; color: var(--text); }
+  h3 { font-size: 15px; font-weight: 600; margin: 20px 0 8px; color: var(--text); }
+  p { margin-bottom: 10px; color: #374151; }
+  ul, ol { padding-left: 22px; margin-bottom: 12px; }
+  li { margin-bottom: 5px; color: #374151; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+  }
+  .card-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+  .card-body { font-size: 13px; color: #4b5563; }
+
+  .note {
+    background: var(--amber-light);
+    border-left: 4px solid var(--amber);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 14px;
+    margin: 14px 0;
+    font-size: 13px;
+    color: #78350f;
+  }
+  .tip {
+    background: var(--green-light);
+    border-left: 4px solid var(--green);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 14px;
+    margin: 14px 0;
+    font-size: 13px;
+    color: #065f46;
+  }
+  .warning {
+    background: var(--red-light);
+    border-left: 4px solid var(--red);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 14px;
+    margin: 14px 0;
+    font-size: 13px;
+    color: #7f1d1d;
+  }
+  .info {
+    background: var(--blue-light);
+    border-left: 4px solid var(--blue);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 14px;
+    margin: 14px 0;
+    font-size: 13px;
+    color: #0c4a6e;
+  }
+
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+  th { background: #f1f5f9; padding: 8px 12px; text-align: left; font-weight: 600; border: 1px solid var(--border); }
+  td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) { background: #f8fafc; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .badge-green { background: #dcfce7; color: #166534; }
+  .badge-blue  { background: #dbeafe; color: #1e40af; }
+  .badge-amber { background: #fef3c7; color: #92400e; }
+  .badge-red   { background: #fee2e2; color: #991b1b; }
+  .badge-purple{ background: #f3e8ff; color: #6b21a8; }
+
+  code {
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #1e293b;
+  }
+  pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    overflow-x: auto;
+    margin: 12px 0;
+  }
+
+  .steps { counter-reset: step; }
+  .step {
+    display: flex; gap: 14px;
+    margin-bottom: 14px;
+    align-items: flex-start;
+  }
+  .step-num {
+    counter-increment: step;
+    min-width: 28px; height: 28px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step-body { padding-top: 4px; font-size: 14px; }
+
+  .hero {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: white;
+    padding: 40px 48px;
+    margin: -40px -48px 48px;
+  }
+  .hero h1 { font-size: 28px; font-weight: 800; }
+  .hero p { color: #94a3b8; margin-top: 6px; font-size: 15px; }
+  .hero-badges { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .dash-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    border-left: 4px solid currentColor;
+  }
+  .dash-card h4 { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 6px; }
+  .dash-card .value { font-size: 18px; font-weight: 700; }
+  .changelog-entry { border-left: 3px solid var(--accent, #6366f1); padding: 4px 0 4px 16px; margin-bottom: 28px; }
+  .changelog-version { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .changelog-version .v-num { font-size: 16px; font-weight: 700; color: var(--text); }
+  .changelog-list { margin: 0; padding-left: 20px; font-size: 13.5px; color: #4b5563; line-height: 1.7; }
+  .changelog-list li { margin-bottom: 3px; }
+  .changelog-tag { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-right: 4px; }
+  .tag-feature { background: #dbeafe; color: #1e40af; }
+  .tag-fix { background: #fee2e2; color: #991b1b; }
+  .tag-infra { background: #f3e8ff; color: #6b21a8; }
+  .tag-docs { background: #fef3c7; color: #92400e; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .content { margin-left: 0; padding: 20px 16px; }
+    .hero { margin: -20px -16px 32px; padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>💵 FinanzasPro Ledger</h1>
+    <p>Manual de usuario · v13.77</p>
+  </div>
+
+  <div class="section-label">Introducción</div>
+  <a href="#intro">🏠 ¿Qué es esta app?</a>
+  <a href="#navegacion">🗂 Navegación</a>
+
+  <div class="section-label">Secciones principales</div>
+  <a href="#carga">✍️ Carga</a>
+  <a href="#rubros">📁 Rubros</a>
+  <a href="#cuentas">🏦 Cuentas</a>
+  <a href="#fijos">📋 Fijos</a>
+  <a href="#libro-diario">📊 Libro diario</a>
+  <a href="#presupuesto">📈 Presupuesto</a>
+
+  <div class="section-label">Módulos adicionales</div>
+  <a href="#recurrentes">🔁 Recurrentes</a>
+  <a href="#torta">🥧 Gastos por rubro</a>
+  <a href="#ahorros">💰 Ahorros</a>
+  <a href="#historial">📅 Historial mensual</a>
+
+  <div class="section-label">Funciones especiales</div>
+  <a href="#backup">💾 Backup y datos</a>
+  <a href="#salir">🚪 Salir</a>
+  <a href="#consola">🛠 Comandos consola</a>
+
+  <div class="section-label">Historial</div>
+  <a href="#changelog">🧾 Historial de cambios</a>
+</nav>
+
+<main class="content">
+
+  <div class="hero">
+    <h1>💵 FinanzasPro Ledger</h1>
+    <p>Manual completo de usuario — Registro diario de gastos e ingresos</p>
+    <div class="hero-badges">
+      <span class="badge badge-green">✓ v13.77</span>
+      <span class="badge badge-blue">✓ Sin servidor</span>
+      <span class="badge badge-amber">✓ Datos locales</span>
+    </div>
+  </div>
+
+  <!-- INTRO -->
+  <section class="section" id="intro">
+    <div class="section-header">
+      <span class="section-icon">🏠</span>
+      <div>
+        <div class="section-title">¿Qué es FinanzasPro Ledger?</div>
+        <div class="section-subtitle">Descripción general de la aplicación</div>
+      </div>
+    </div>
+    <p>FinanzasPro Ledger es un libro diario de gastos e ingresos: registrás cada movimiento con su rubro, cuenta y fecha, y la app te muestra en tiempo real el presupuesto ejecutado por categoría, tus tenencias por cuenta y un historial mensual completo.</p>
+    <p>Es una PWA (se instala como app) que funciona sin conexión y guarda todo en el dispositivo, con opciones de backup en carpeta local y en Google Drive.</p>
+    <div class="tip">💡 A diferencia de Control Financiero (que separa servicios fijos, corrientes y cuotas en módulos propios), acá todo pasa por un único flujo de carga con rubros configurables.</div>
+  </section>
+
+  <!-- NAVEGACION -->
+  <section class="section" id="navegacion">
+    <div class="section-header">
+      <span class="section-icon">🗂</span>
+      <div>
+        <div class="section-title">Navegación</div>
+        <div class="section-subtitle">Cómo está organizada la pantalla</div>
+      </div>
+    </div>
+    <p>La app se divide en tres columnas:</p>
+    <div class="dashboard-grid">
+      <div class="dash-card" style="color:var(--blue);">
+        <h4>Panel izquierdo</h4>
+        <div class="value" style="font-size:13px;">Pestañas: Carga, Rubros, Cuentas, Fijos</div>
+      </div>
+      <div class="dash-card" style="color:var(--primary);">
+        <h4>Panel central</h4>
+        <div class="value" style="font-size:13px;">Libro diario con filtros por fecha y texto</div>
+      </div>
+      <div class="dash-card" style="color:var(--green);">
+        <h4>Panel derecho</h4>
+        <div class="value" style="font-size:13px;">Presupuesto vs gastos, Top 5, Recurrentes</div>
+      </div>
+    </div>
+    <p>El pie de página (footer) concentra los botones de Ayuda, Carpeta, Exportar/Importar, Drive, Ahorros, Rubros (gráfico), Historial, Local (snapshots) y Salir.</p>
+    <div class="info">ℹ️ Todos los botones de ayuda (🟡 ?) que ves junto a los títulos te traen directo a la sección correspondiente de este manual.</div>
+  </section>
+
+  <!-- CARGA -->
+  <section class="section" id="carga">
+    <div class="section-header">
+      <span class="section-icon">✍️</span>
+      <div>
+        <div class="section-title">Carga</div>
+        <div class="section-subtitle">Registrar un movimiento nuevo</div>
+      </div>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-body">Elegí el <b>tipo de operación</b>: Gasto/Ingreso o Transferencia entre cuentas.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Completá <b>Concepto</b>, <b>Monto</b> y <b>Fecha</b>.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Si es Gasto/Ingreso, elegí el <b>rubro</b> (o usá los chips de rubros rápidos) y la <b>cuenta impactada</b>.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Si es Transferencia, elegí cuenta <b>origen</b> (resta) y <b>destino</b> (suma).</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Agregá una <b>nota</b> opcional y tocá <b>✓ Asentar registro</b>.</div></div>
+    </div>
+    <div class="tip">💡 Los chips de rubros rápidos muestran tus categorías más usadas para no tener que abrir el select cada vez.</div>
+  </section>
+
+  <!-- RUBROS -->
+  <section class="section" id="rubros">
+    <div class="section-header">
+      <span class="section-icon">📁</span>
+      <div>
+        <div class="section-title">Rubros</div>
+        <div class="section-subtitle">Categorías de gasto e ingreso</div>
+      </div>
+    </div>
+    <h2>Crear o editar un rubro</h2>
+    <p>Definí un <b>nombre</b>, el <b>tipo</b> (gasto o ingreso) y, opcionalmente, un <b>límite mensual</b> en pesos. Los rubros con límite aparecen con barra de progreso en el panel de Presupuesto.</p>
+    <h2>Límites por mes</h2>
+    <p>El selector "Límites del mes" te permite definir un tope distinto para meses puntuales sin tener que cambiar el límite general del rubro.</p>
+  </section>
+
+  <!-- CUENTAS -->
+  <section class="section" id="cuentas">
+    <div class="section-header">
+      <span class="section-icon">🏦</span>
+      <div>
+        <div class="section-title">Cuentas</div>
+        <div class="section-subtitle">Cuentas bancarias, efectivo y Google Drive</div>
+      </div>
+    </div>
+    <p>Siempre existe la cuenta <b>Efectivo</b>. Podés nombrar hasta 3 cuentas de débito adicionales (banco, Mercado Pago, billetera virtual, etc.).</p>
+    <h2>Google Drive (opcional)</h2>
+    <p>Pegá tu <b>Client ID</b> de Google Cloud Console para habilitar el backup en Drive. Sin este dato, los botones de Drive quedan ocultos y solo se usan carpeta local y snapshots.</p>
+    <div class="warning">⚠️ El Client ID es por dispositivo/navegador — si cambiás de PC, hay que configurarlo de nuevo.</div>
+  </section>
+
+  <!-- FIJOS -->
+  <section class="section" id="fijos">
+    <div class="section-header">
+      <span class="section-icon">📋</span>
+      <div>
+        <div class="section-title">Fijos</div>
+        <div class="section-subtitle">Servicios fijos y compras en cuotas</div>
+      </div>
+    </div>
+    <p>Esta pestaña agrupa los <b>servicios fijos</b> (vencimientos recurrentes) y las <b>compras en cuotas</b> en curso, para tenerlos a mano sin mezclarlos con la carga diaria.</p>
+  </section>
+
+  <!-- LIBRO DIARIO -->
+  <section class="section" id="libro-diario">
+    <div class="section-header">
+      <span class="section-icon">📊</span>
+      <div>
+        <div class="section-title">Libro diario</div>
+        <div class="section-subtitle">Listado de movimientos del panel central</div>
+      </div>
+    </div>
+    <p>Filtrá por rango de <b>fechas</b> o por texto/rubro con el selector avanzado. El contador inferior muestra la cantidad de asientos y el total filtrado.</p>
+    <h2>Impresión / PDF</h2>
+    <p>El botón 🖨️ genera una vista de impresión del libro diario tal como está filtrado en pantalla.</p>
+  </section>
+
+  <!-- PRESUPUESTO -->
+  <section class="section" id="presupuesto">
+    <div class="section-header">
+      <span class="section-icon">📈</span>
+      <div>
+        <div class="section-title">Presupuesto vs gastos</div>
+        <div class="section-subtitle">Panel derecho — ejecución del mes</div>
+      </div>
+    </div>
+    <p>Muestra el <b>Top 5 de gastos</b> del mes por rubro y, debajo, el detalle de ejecución de cada rubro con límite configurado.</p>
+  </section>
+
+  <!-- RECURRENTES -->
+  <section class="section" id="recurrentes">
+    <div class="section-header">
+      <span class="section-icon">🔁</span>
+      <div>
+        <div class="section-title">Movimientos recurrentes</div>
+        <div class="section-subtitle">Automatizar cargas repetitivas</div>
+      </div>
+    </div>
+    <p>Configurá un movimiento (concepto, monto, rubro, cuenta) para que se genere automáticamente cada mes, sin tener que cargarlo a mano. Ideal para suscripciones o gastos fijos que no varían.</p>
+  </section>
+
+  <!-- TORTA -->
+  <section class="section" id="torta">
+    <div class="section-header">
+      <span class="section-icon">🥧</span>
+      <div>
+        <div class="section-title">Gastos por rubro</div>
+        <div class="section-subtitle">Gráfico de torta — mes actual y últimos 12 meses</div>
+      </div>
+    </div>
+    <p>El botón 🥧 Rubros del footer abre un gráfico de torta con la distribución del gasto por categoría. Tiene dos pestañas: el mes en curso y una vista acumulada de los últimos 12 meses.</p>
+  </section>
+
+  <!-- AHORROS -->
+  <section class="section" id="ahorros">
+    <div class="section-header">
+      <span class="section-icon">💰</span>
+      <div>
+        <div class="section-title">Ahorros</div>
+        <div class="section-subtitle">Seguimiento de fondos guardados por subrubro</div>
+      </div>
+    </div>
+    <p>Registrá <b>ingresos</b> y <b>retiros</b> de ahorro por subrubro (por ejemplo, "Vacaciones" o "Fondo de emergencia"). El total general se ve en el encabezado del modal.</p>
+    <h2>Subrubros</h2>
+    <p>El botón ⚙️ Subrubros te permite crear, renombrar o eliminar las categorías de ahorro.</p>
+  </section>
+
+  <!-- HISTORIAL -->
+  <section class="section" id="historial">
+    <div class="section-header">
+      <span class="section-icon">📅</span>
+      <div>
+        <div class="section-title">Historial mensual</div>
+        <div class="section-subtitle">Consulta de meses cerrados</div>
+      </div>
+    </div>
+    <p>Filtrá por <b>tipo</b> de movimiento y <b>rubro</b> para revisar cualquier mes anterior. El botón <b>📊 Exportar Excel</b> descarga el detalle completo del historial a una planilla.</p>
+  </section>
+
+  <!-- BACKUP -->
+  <section class="section" id="backup">
+    <div class="section-header">
+      <span class="section-icon">💾</span>
+      <div>
+        <div class="section-title">Backup y datos</div>
+        <div class="section-subtitle">Cómo se guardan y protegen los datos</div>
+      </div>
+    </div>
+    <h2>Dónde viven los datos</h2>
+    <p>Todo se guarda en el <code>localStorage</code> del navegador, en el dispositivo. No hay servidor ni base de datos externa.</p>
+    <h2>Métodos de backup</h2>
+    <table>
+      <thead><tr><th>Método</th><th>Cómo funciona</th></tr></thead>
+      <tbody>
+        <tr><td><b>💾 Local (snapshots)</b></td><td>Guarda automáticamente hasta 10 copias en el propio navegador. Se puede restaurar desde el botón "Local" del footer.</td></tr>
+        <tr><td><b>📂 Carpeta</b></td><td>Vinculás una carpeta del dispositivo y la app escribe un backup ahí en cada cambio importante (con debounce de 5 segundos).</td></tr>
+        <tr><td><b>☁️ Drive</b></td><td>Requiere Client ID configurado en Cuentas. Subís o restaurás backups manualmente con los botones ☁️ Drive.</td></tr>
+        <tr><td><b>📥 Exportar / 📤 Importar</b></td><td>Backup manual a un archivo <code>.json</code> que podés guardar donde quieras.</td></tr>
+      </tbody>
+    </table>
+    <div class="warning">⚠️ Ningún método reemplaza a los otros — usalos combinados. Los snapshots locales se pierden si borrás datos del navegador.</div>
+  </section>
+
+  <!-- SALIR -->
+  <section class="section" id="salir">
+    <div class="section-header">
+      <span class="section-icon">🚪</span>
+      <div>
+        <div class="section-title">Salir</div>
+        <div class="section-subtitle">Cierre seguro con backup</div>
+      </div>
+    </div>
+    <p>El botón 🚪 Salir del footer guarda un snapshot, intenta backup en carpeta local (si está vinculada) y en Drive (si hay token vigente), y te muestra un resumen del resultado antes de cerrar.</p>
+  </section>
+
+  <!-- CONSOLA -->
+  <section class="section" id="consola">
+    <div class="section-header">
+      <span class="section-icon">🛠</span>
+      <div>
+        <div class="section-title">Comandos de Consola</div>
+        <div class="section-subtitle">Comandos útiles para la consola del navegador (F12)</div>
+      </div>
+    </div>
+    <h2>Datos</h2>
+    <pre>// Ver todos los rubros
+console.log(JSON.stringify(DB.rubros))
+
+// Ver últimos movimientos
+console.log(JSON.stringify(DB.movimientos.slice(-5)))
+
+// Ver recurrentes configurados
+console.log(JSON.stringify(DB.recurrentes))</pre>
+
+    <h2>Drive</h2>
+    <pre>// Ver token de Drive activo
+console.log(gToken ? 'Token activo' : 'Sin token')</pre>
+  </section>
+
+  <!-- CHANGELOG -->
+  <section class="section" id="changelog">
+    <div class="section-header">
+      <span class="section-icon">🧾</span>
+      <div>
+        <div class="section-title">Historial de cambios</div>
+        <div class="section-subtitle">Registro de versiones — de más reciente a más antigua</div>
+      </div>
+    </div>
+
+    <div class="changelog-entry">
+      <div class="changelog-version"><span class="v-num">v13.77</span><span class="changelog-tag tag-docs">docs</span></div>
+      <ul class="changelog-list">
+        <li>Nuevo manual de usuario (instructivo.html) con secciones navegables, igual formato que Control Financiero</li>
+        <li>Botones de ayuda contextual (🟡 ?) agregados en Carga, Rubros, Cuentas, Fijos, Libro diario, Presupuesto, Recurrentes, Gastos por rubro, Ahorros, Historial y Backup</li>
+        <li>Botón global ❓ Ayuda agregado al footer</li>
+      </ul>
+    </div>
+
+  </section>
+
+</main>
+</div>
+
+<script>
+const sections = document.querySelectorAll('.section');
+const links = document.querySelectorAll('.sidebar a');
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const id = entry.target.id;
+      const active = document.querySelector(`.sidebar a[href="#${id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { threshold: 0.3 });
+
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
