@@ -246,7 +246,7 @@
 <nav class="sidebar">
   <div class="sidebar-logo">
     <h1>💵 FinanzasPro Ledger</h1>
-    <p>Manual de usuario · v13.77</p>
+    <p>Manual de usuario · v13.88</p>
   </div>
 
   <div class="section-label">Introducción</div>
@@ -282,7 +282,7 @@
     <h1>💵 FinanzasPro Ledger</h1>
     <p>Manual completo de usuario — Registro diario de gastos e ingresos</p>
     <div class="hero-badges">
-      <span class="badge badge-green">✓ v13.77</span>
+      <span class="badge badge-green">✓ v13.88</span>
       <span class="badge badge-blue">✓ Sin servidor</span>
       <span class="badge badge-amber">✓ Datos locales</span>
     </div>
@@ -328,6 +328,8 @@
     </div>
     <p>El pie de página (footer) concentra los botones de Ayuda, Carpeta, Exportar/Importar, Drive, Ahorros, Rubros (gráfico), Historial, Local (snapshots) y Salir.</p>
     <div class="info">ℹ️ Todos los botones de ayuda (🟡 ?) que ves junto a los títulos te traen directo a la sección correspondiente de este manual.</div>
+    <h2>Selector $U / USD</h2>
+    <p>En el header hay un switch <b>$U / USD</b> que cambia la moneda de visualización de Ahorros y otros totales. No convierte montos: cada registro guarda su propia moneda, y el switch simplemente filtra/formatea la vista.</p>
   </section>
 
   <!-- CARGA -->
@@ -347,6 +349,7 @@
       <div class="step"><div class="step-num"></div><div class="step-body">Agregá una <b>nota</b> opcional y tocá <b>✓ Asentar registro</b>.</div></div>
     </div>
     <div class="tip">💡 Los chips de rubros rápidos muestran tus categorías más usadas para no tener que abrir el select cada vez.</div>
+    <div class="info">ℹ️ Cada movimiento tiene un campo <b>Moneda</b> ($U o USD). Por defecto toma la moneda activa del switch del header, pero se puede cambiar por registro.</div>
   </section>
 
   <!-- RUBROS -->
@@ -453,6 +456,8 @@
     <p>Registrá <b>ingresos</b> y <b>retiros</b> de ahorro por subrubro (por ejemplo, "Vacaciones" o "Fondo de emergencia"). El total general se ve en el encabezado del modal.</p>
     <h2>Subrubros</h2>
     <p>El botón ⚙️ Subrubros te permite crear, renombrar o eliminar las categorías de ahorro.</p>
+    <h2>Moneda por subrubro</h2>
+    <p>Cada subrubro de ahorro tiene su propia moneda (UYU o USD). Los totales se muestran separados por moneda en el encabezado, y cada tarjeta de subrubro indica cuál usa.</p>
   </section>
 
   <!-- HISTORIAL -->
@@ -464,7 +469,7 @@
         <div class="section-subtitle">Consulta de meses cerrados</div>
       </div>
     </div>
-    <p>Filtrá por <b>tipo</b> de movimiento y <b>rubro</b> para revisar cualquier mes anterior. El botón <b>📊 Exportar Excel</b> descarga el detalle completo del historial a una planilla.</p>
+    <p>Filtrá por <b>tipo</b> de movimiento, <b>rubro</b> y <b>moneda</b> para revisar cualquier mes anterior. El botón <b>📊 Exportar Excel</b> descarga el detalle completo del historial a una planilla, incluyendo la columna Moneda.</p>
   </section>
 
   <!-- BACKUP -->
@@ -535,6 +540,14 @@ console.log(gToken ? 'Token activo' : 'Sin token')</pre>
         <div class="section-title">Historial de cambios</div>
         <div class="section-subtitle">Registro de versiones — de más reciente a más antigua</div>
       </div>
+    </div>
+
+    <div class="changelog-entry">
+      <div class="changelog-version"><span class="v-num">v13.88</span><span class="changelog-tag tag-feature">feature</span></div>
+      <ul class="changelog-list">
+        <li>Doble moneda ARS/USD: switch $U/USD en el header, campo Moneda en Carga, filtro por moneda en Historial (con columna en export Excel) y moneda por subrubro en Ahorros con totales separados</li>
+        <li>Splash: frase "especial para Mariela" reubicada en Dancing Script 32px (antes decía "Development by Guille"), y leyenda de versión reducida al 50%</li>
+      </ul>
     </div>
 
     <div class="changelog-entry">
