@@ -363,7 +363,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo" id="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version" style="display:flex;align-items:baseline;gap:8px;justify-content:center;">v13.90 · Ledger Edition</div>
+    <div class="splash-version" style="display:flex;align-items:baseline;gap:8px;justify-content:center;">v13.91 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">especial para Mariela</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -690,7 +690,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.90';
+const APP_VERSION = '13.91';
 const DEV_MODE = false; // gastos_m (prod): Drive habilitado
 
 let vistaMoneda = 'UYU';
@@ -734,12 +734,16 @@ function gmInsertarAyudas() {
 }
 
 // ── Google Drive (desactivado hasta que el usuario configure Client ID) ─────
-const GM_DRIVE_SCOPE    = 'https://www.googleapis.com/auth/drive.appdata';
-const GM_GTOKEN_KEY     = 'gm_gtoken';
-const GM_GTOKEN_EXP_KEY = 'gm_gtoken_exp';
-const GM_CLIENT_ID_KEY  = 'gm_drive_client_id';
+const GM_DRIVE_SCOPE     = 'https://www.googleapis.com/auth/drive.file';
+const GM_GTOKEN_KEY      = 'gm_gtoken';
+const GM_GTOKEN_EXP_KEY  = 'gm_gtoken_exp';
+const GM_GTOKEN_SCOPE_KEY     = 'gm_gtoken_scope_v';
+const GM_GTOKEN_SCOPE_VERSION = '2'; // v2: carpeta visible "FinanzasPro" (drive.file) en vez de appDataFolder oculta
+const GM_CLIENT_ID_KEY   = 'gm_drive_client_id';
+const GM_DRIVE_FOLDER    = 'FinanzasPro';
 let gmGToken = null;
 let gmDriveFileId = null;
+let _gmFolderId = null;
 
 function gmGetClientId() { return localStorage.getItem(GM_CLIENT_ID_KEY) || ''; }
 function gmGuardarClientId() {
@@ -757,14 +761,20 @@ function gmActualizarBotonesDrive() {
 }
 function gmGTokenGuardar(token, expiresIn) {
     const exp = Date.now() + (expiresIn||3500)*1000;
-    try { localStorage.setItem(GM_GTOKEN_KEY, token); localStorage.setItem(GM_GTOKEN_EXP_KEY, String(exp)); } catch(e){}
+    try {
+        localStorage.setItem(GM_GTOKEN_KEY, token);
+        localStorage.setItem(GM_GTOKEN_EXP_KEY, String(exp));
+        localStorage.setItem(GM_GTOKEN_SCOPE_KEY, GM_GTOKEN_SCOPE_VERSION);
+    } catch(e){}
     gmGToken = token;
 }
 function gmGTokenCargarLocal() {
     try {
         const t = localStorage.getItem(GM_GTOKEN_KEY);
         const exp = parseInt(localStorage.getItem(GM_GTOKEN_EXP_KEY)||'0');
-        if(t && exp && Date.now() < exp - 60000) { gmGToken = t; return true; }
+        const scopeV = localStorage.getItem(GM_GTOKEN_SCOPE_KEY);
+        // Token viejo (scope appDataFolder) no sirve para la carpeta visible: se descarta y se re-pide consentimiento
+        if(t && exp && Date.now() < exp - 60000 && scopeV === GM_GTOKEN_SCOPE_VERSION) { gmGToken = t; return true; }
     } catch(e){}
     return false;
 }
@@ -804,36 +814,53 @@ function gmGetToken(cb) {
         client.requestAccessToken({prompt:''});
     });
 }
+// Busca (o crea) la carpeta visible "FinanzasPro" en el Drive del usuario
+function gmDriveEnsureFolder(token, cb) {
+    if(_gmFolderId){ cb(_gmFolderId); return; }
+    const q = encodeURIComponent(`name='${GM_DRIVE_FOLDER}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+    fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,{headers:{Authorization:'Bearer '+token}})
+    .then(r=>r.json()).then(data=>{
+        if(data.files && data.files.length){ _gmFolderId = data.files[0].id; cb(_gmFolderId); return; }
+        fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({name:GM_DRIVE_FOLDER,mimeType:'application/vnd.google-apps.folder'})})
+        .then(r=>r.json()).then(f=>{ _gmFolderId=f.id; cb(_gmFolderId); })
+        .catch(()=>{ toast('Error al crear carpeta en Drive', 'error'); });
+    }).catch(()=>{ toast('Error al buscar carpeta en Drive', 'error'); });
+}
 function gmDriveSubir() {
     if (DEV_MODE) { toast('☁️ Drive desactivado en entorno de desarrollo', 'error'); return; }
     gmGetToken(token => {
-        const ahora = new Date();
-        const ts = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}-${String(ahora.getHours()).padStart(2,'0')}-${String(ahora.getMinutes()).padStart(2,'0')}`;
-        const nombre = `finanzaspro_backup_${ts}.json`;
-        const data = JSON.stringify(DB, null, 2);
-        const meta = JSON.stringify({name: nombre, parents: ['appDataFolder']});
-        const form = new FormData();
-        form.append('metadata', new Blob([meta], {type:'application/json'}));
-        form.append('file',     new Blob([data], {type:'application/json'}));
-        fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-            {method:'POST', headers:{Authorization:'Bearer '+token}, body:form})
-        .then(r=>r.json())
-        .then(f => { if(f.id) { toast('✅ Backup subido a Drive: '+nombre, 'success'); } else { toast('Error al subir: '+JSON.stringify(f), 'error'); gmGTokenLimpiar(); }})
-        .catch(e => { toast('Error: '+e.message, 'error'); gmGTokenLimpiar(); });
+        gmDriveEnsureFolder(token, folderId => {
+            const ahora = new Date();
+            const ts = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}-${String(ahora.getHours()).padStart(2,'0')}-${String(ahora.getMinutes()).padStart(2,'0')}`;
+            const nombre = `finanzaspro_backup_${ts}.json`;
+            const data = JSON.stringify(DB, null, 2);
+            const meta = JSON.stringify({name: nombre, parents: [folderId]});
+            const form = new FormData();
+            form.append('metadata', new Blob([meta], {type:'application/json'}));
+            form.append('file',     new Blob([data], {type:'application/json'}));
+            fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+                {method:'POST', headers:{Authorization:'Bearer '+token}, body:form})
+            .then(r=>r.json())
+            .then(f => { if(f.id) { toast('✅ Backup subido a Drive: '+nombre, 'success'); } else { toast('Error al subir: '+JSON.stringify(f), 'error'); gmGTokenLimpiar(); }})
+            .catch(e => { toast('Error: '+e.message, 'error'); gmGTokenLimpiar(); });
+        });
     });
 }
 function gmDriveRestaurar() {
     if (DEV_MODE) { toast('☁️ Drive desactivado en entorno de desarrollo', 'error'); return; }
     gmGetToken(token => {
-        fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=20',
-            {headers:{Authorization:'Bearer '+token}})
-        .then(r=>r.json())
-        .then(data => {
-            const arch = (data.files||[]).filter(f=>f.name.startsWith('finanzaspro_backup_'));
-            if(!arch.length) { alert('No hay backups en Drive.'); return; }
-            gmMostrarModalDrive(arch, token);
-        })
-        .catch(e => { toast('Error al listar Drive: '+e.message, 'error'); gmGTokenLimpiar(); });
+        gmDriveEnsureFolder(token, folderId => {
+            const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+            fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=20`,
+                {headers:{Authorization:'Bearer '+token}})
+            .then(r=>r.json())
+            .then(data => {
+                const arch = (data.files||[]).filter(f=>f.name.startsWith('finanzaspro_backup_'));
+                if(!arch.length) { alert('No hay backups en Drive.'); return; }
+                gmMostrarModalDrive(arch, token);
+            })
+            .catch(e => { toast('Error al listar Drive: '+e.message, 'error'); gmGTokenLimpiar(); });
+        });
     });
 }
 function gmMostrarModalDrive(arch, token) {
@@ -981,11 +1008,12 @@ async function gmSalir() {
     const tieneToken    = tieneClientId && gmGTokenCargarLocal();
     if (tieneToken) {
         try {
+            const folderId = await new Promise(resolve => gmDriveEnsureFolder(gmGToken, resolve));
             const ahora  = new Date();
             const ts     = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}-${String(ahora.getHours()).padStart(2,'0')}-${String(ahora.getMinutes()).padStart(2,'0')}`;
             const nombre = `finanzaspro_backup_${ts}.json`;
             const data   = JSON.stringify(DB, null, 2);
-            const meta   = JSON.stringify({name: nombre, parents: ['appDataFolder']});
+            const meta   = JSON.stringify({name: nombre, parents: [folderId]});
             const form   = new FormData();
             form.append('metadata', new Blob([meta], {type:'application/json'}));
             form.append('file',     new Blob([data], {type:'application/json'}));
