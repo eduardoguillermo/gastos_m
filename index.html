@@ -363,7 +363,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo" id="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version" style="display:flex;align-items:baseline;gap:8px;justify-content:center;">v13.91 · Ledger Edition</div>
+    <div class="splash-version" style="display:flex;align-items:baseline;gap:8px;justify-content:center;">v13.92 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">especial para Mariela</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -690,7 +690,7 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.91';
+const APP_VERSION = '13.92';
 const DEV_MODE = false; // gastos_m (prod): Drive habilitado
 
 let vistaMoneda = 'UYU';
@@ -3708,21 +3708,28 @@ window.addEventListener('DOMContentLoaded', function() {
     setTimeout(gmMostrarVencimientos, 800);
 
     // Splash: cierre independiente — no depende de async (restaurarCarpetaGuardada)
+    // En móvil (≤768px) el splash no se muestra: se quita de inmediato y se restaura la carpeta enseguida.
     const splash = document.getElementById('splash');
-    // Arrancar barra de progreso con pequeño delay para que la transición CSS dispare
-    setTimeout(() => {
-        const bar = document.getElementById('splash-bar');
-        if (bar) bar.style.width = '100%';
-    }, 50);
-    setTimeout(() => {
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-            splash.classList.add('fade-out');
-            setTimeout(() => splash.remove(), 320);
-        }));
-    }, 5000);
+    const esMovilSplash = window.innerWidth <= 768;
+    if (esMovilSplash && splash) {
+        splash.remove();
+        restaurarCarpetaGuardada();
+    } else {
+        // Arrancar barra de progreso con pequeño delay para que la transición CSS dispare
+        setTimeout(() => {
+            const bar = document.getElementById('splash-bar');
+            if (bar) bar.style.width = '100%';
+        }, 50);
+        setTimeout(() => {
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                splash.classList.add('fade-out');
+                setTimeout(() => splash.remove(), 320);
+            }));
+        }, 5000);
 
-    // Restaurar carpeta DESPUÉS de cerrar splash para no interferir
-    setTimeout(() => restaurarCarpetaGuardada(), 5100);
+        // Restaurar carpeta DESPUÉS de cerrar splash para no interferir
+        setTimeout(() => restaurarCarpetaGuardada(), 5100);
+    }
 
     // Versión dinámica en header
     const hdrV = document.getElementById('hdr-version');
