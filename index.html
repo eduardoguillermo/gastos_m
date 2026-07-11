@@ -420,7 +420,7 @@
 <!-- SPLASH -->
 <div id="splash">
     <div class="splash-logo" id="splash-logo">Finanzas<span>Pro</span></div>
-    <div class="splash-version" style="display:flex;align-items:baseline;gap:8px;justify-content:center;">v13.94 · Ledger Edition</div>
+    <div class="splash-version" style="display:flex;align-items:baseline;gap:8px;justify-content:center;">v13.95 · Ledger Edition</div>
     <div style="position:absolute;bottom:18%;right:8%;font-family:'Dancing Script',cursive;font-size:32px;color:#93c5fd;pointer-events:none">especial para Mariela</div>
     <div class="splash-progress-track">
         <div class="splash-progress-bar" id="splash-bar"></div>
@@ -747,8 +747,17 @@
 // ════════════════════════════════════════════════════
 //  CONSTANTES Y ESTADO GLOBAL
 // ════════════════════════════════════════════════════
-const APP_VERSION = '13.94';
+const APP_VERSION = '13.95';
 const DEV_MODE = false; // gastos_m (prod): Drive habilitado
+
+function gmNuevoUUID() {
+    return (crypto.randomUUID ? crypto.randomUUID() : (Date.now()+'-'+Math.random().toString(36).slice(2)));
+}
+function gmTouch(mov) {
+    if (!mov.uuid) mov.uuid = gmNuevoUUID();
+    mov.lastModified = Date.now();
+    return mov;
+}
 
 let vistaMoneda = 'UYU';
 function fmtVista(v) {
@@ -930,16 +939,18 @@ function gmMostrarModalDrive(arch, token) {
         return `<tr style="border-bottom:1px solid var(--border);">
             <td style="padding:8px 6px;font-size:12px;">${f.name}</td>
             <td style="padding:8px 6px;font-size:11px;color:var(--text-muted);">${fecha}</td>
-            <td style="padding:8px 6px;text-align:right;">
-                <button onclick="gmDriveCargarArchivo('${f.id}','${token}')" style="background:#0f766e;color:white;border:none;border-radius:4px;padding:3px 10px;font-size:12px;cursor:pointer;">Restaurar</button>
+            <td style="padding:8px 6px;text-align:right;white-space:nowrap;">
+                <button onclick="gmDriveFusionarArchivo('${f.id}','${token}')" style="background:#4f46e5;color:white;border:none;border-radius:4px;padding:3px 10px;font-size:12px;cursor:pointer;margin-right:4px;" title="Combina los gastos de ambos lados por id único, sin borrar nada">🔀 Fusionar</button>
+                <button onclick="gmDriveCargarArchivo('${f.id}','${token}')" style="background:#0f766e;color:white;border:none;border-radius:4px;padding:3px 10px;font-size:12px;cursor:pointer;" title="Reemplaza TODA la base local por esta">Reemplazar</button>
             </td>
         </tr>`;
     }).join('');
-    ov.innerHTML = `<div style="background:white;border-radius:10px;padding:24px;min-width:400px;max-width:90vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    ov.innerHTML = `<div style="background:white;border-radius:10px;padding:24px;min-width:460px;max-width:90vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <h3 style="margin:0;font-size:16px;display:flex;align-items:center;">☁️ Backups en Drive${btnAyuda('backup')}</h3>
             <button onclick="document.getElementById('modal-gm-drive').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
         </div>
+        <p style="font-size:11px;color:var(--text-muted);margin:0 0 12px;">🔀 <b>Fusionar</b>: suma los gastos nuevos de ese backup a los que ya tenés (recomendado). <b>Reemplazar</b>: borra todo lo local y lo cambia por ese backup.</p>
         <table style="width:100%;border-collapse:collapse;">
             <thead><tr style="border-bottom:2px solid var(--border);">
                 <th style="padding:6px;text-align:left;font-size:12px;color:var(--text-muted);">Archivo</th>
@@ -953,6 +964,78 @@ function gmMostrarModalDrive(arch, token) {
         </div>
     </div>`;
     document.body.appendChild(ov);
+}
+
+// ── Merge real de movimientos por uuid (last-write-wins por lastModified) ──
+function gmMergeMovimientos(remotos) {
+    const mapa = new Map();
+    DB.movimientos.forEach(m => {
+        if (!m.uuid) m.uuid = gmNuevoUUID();
+        if (!m.lastModified) m.lastModified = 0;
+        mapa.set(m.uuid, m);
+    });
+    let agregados = 0, actualizados = 0, sinIdentidad = 0;
+    (remotos || []).forEach(rm => {
+        if (!rm.uuid) { sinIdentidad++; return; } // sin identidad estable: no se puede mergear con seguridad
+        const local = mapa.get(rm.uuid);
+        if (!local) {
+            mapa.set(rm.uuid, rm);
+            agregados++;
+        } else if ((rm.lastModified || 0) > (local.lastModified || 0)) {
+            mapa.set(rm.uuid, rm);
+            actualizados++;
+        }
+    });
+    DB.movimientos = Array.from(mapa.values());
+    // Reacomodar el contador local para no volver a colisionar con ids numéricos que vinieron del otro lado
+    const maxId = DB.movimientos.reduce((mx, m) => Math.max(mx, m.id || 0), 0);
+    if (maxId >= DB.nid) DB.nid = maxId + 1;
+    return { agregados, actualizados, sinIdentidad };
+}
+
+// ── Sync automático al abrir: fusiona el backup más nuevo de Drive, sin popup ──
+function gmAutoMergeAlAbrir() {
+    gmGetToken(token => {
+        gmDriveEnsureFolder(token, folderId => {
+        const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+        fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc&pageSize=5`,
+            {headers:{Authorization:'Bearer '+token}})
+        .then(r=>r.json())
+        .then(data => {
+            const arch = (data.files||[]).filter(f=>f.name.startsWith('finanzaspro_backup_'));
+            if (!arch.length) return; // nada para fusionar, silencioso
+            return fetch('https://www.googleapis.com/drive/v3/files/'+arch[0].id+'?alt=media', {headers:{Authorization:'Bearer '+token}})
+                .then(r=>r.json())
+                .then(data2 => {
+                    const remoto = migrar(data2);
+                    const { agregados, actualizados } = gmMergeMovimientos(remoto.movimientos);
+                    if (agregados || actualizados) {
+                        saveImmediate();
+                        render();
+                        toast(`🔀 Sync: ${agregados} gasto(s) nuevo(s) desde Drive`, 'info', 3500);
+                    }
+                });
+        })
+        .catch(() => {}); // fallo silencioso: no interrumpir el arranque de la app
+        });
+    });
+}
+function gmDriveFusionarArchivo(id, token) {
+    if (!confirm('¿Fusionar este backup? Se van a sumar los gastos nuevos sin borrar los que ya tenés.')) return;
+    gmHacerSnapshot(false);
+    fetch('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media', {headers:{Authorization:'Bearer '+token}})
+    .then(r=>r.json())
+    .then(data => {
+        const remoto = migrar(data);
+        const { agregados, actualizados, sinIdentidad } = gmMergeMovimientos(remoto.movimientos);
+        saveImmediate();
+        document.getElementById('modal-gm-drive')?.remove();
+        render();
+        let msg = `✅ Fusión completa: ${agregados} nuevo(s), ${actualizados} actualizado(s)`;
+        if (sinIdentidad) msg += `, ${sinIdentidad} sin fusionar (backup viejo)`;
+        toast(msg, 'success', 4500);
+    })
+    .catch(e => { toast('Error al fusionar: '+e.message, 'error'); });
 }
 function gmDriveCargarArchivo(id, token) {
     if(!confirm('¿Restaurar este backup? Los datos actuales se guardarán como snapshot antes.')) return;
@@ -1837,7 +1920,7 @@ function gmPagarServicio(id) {
         var mes = fecha.slice(0,7);
         s.pagos[mes] = fecha;
         // Registrar movimiento en libro diario
-        DB.movimientos.push({ id: DB.nid++, concepto: s.nombre, monto: s.monto, rubroId: rubroId, origen: cuenta, destino: null, fecha: fecha, fijoId: s.id, fijoTipo: 'servicio', fijoMes: mes });
+        DB.movimientos.push(gmTouch({ id: DB.nid++, concepto: s.nombre, monto: s.monto, rubroId: rubroId, origen: cuenta, destino: null, fecha: fecha, fijoId: s.id, fijoTipo: 'servicio', fijoMes: mes }));
         save();
         render();
         gmRenderServicios();
@@ -1975,7 +2058,7 @@ function gmPagarCuota(id) {
         c.pagos[mes] = fecha;
         c.cuotaActual++;
         // Registrar movimiento en libro diario
-        DB.movimientos.push({ id: DB.nid++, concepto: c.nombre + ' cuota ' + numCuota + '/' + c.cuotasTotal, monto: c.monto, rubroId: rubroId, origen: cuenta, destino: null, fecha: fecha, fijoId: c.id, fijoTipo: 'cuota', fijoMes: mes });
+        DB.movimientos.push(gmTouch({ id: DB.nid++, concepto: c.nombre + ' cuota ' + numCuota + '/' + c.cuotasTotal, monto: c.monto, rubroId: rubroId, origen: cuenta, destino: null, fecha: fecha, fijoId: c.id, fijoTipo: 'cuota', fijoMes: mes }));
         save();
         render();
         gmRenderCuotas();
@@ -2712,20 +2795,20 @@ function guardarMovimiento() {
         const origen  = document.getElementById('mov-transf-origen').value;
         const destino = document.getElementById('mov-transf-destino').value;
         if (origen === destino) { toast('Origen y destino no pueden ser iguales.', 'error'); return; }
-        DB.movimientos.push({
+        DB.movimientos.push(gmTouch({
             id: DB.nid++, concepto: conceptoEl.value.trim() || 'Transferencia',
             monto, rubroId: 0, origen, destino, fecha, moneda
-        });
+        }));
     } else {
         const rubroId = parseInt(document.getElementById('mov-rubro').value);
         const origen  = document.getElementById('mov-origen').value;
         if (isNaN(rubroId)) { toast('Seleccioná un rubro.', 'error'); return; }
         const notas = (document.getElementById('mov-notas')?.value||'').trim();
-        DB.movimientos.push({
+        DB.movimientos.push(gmTouch({
             id: DB.nid++, concepto: conceptoEl.value.trim(),
             monto, rubroId, origen, destino: null, fecha, moneda,
             notas: notas || undefined
-        });
+        }));
     }
 
     conceptoEl.value = '';
@@ -2740,10 +2823,10 @@ function guardarMovimiento() {
         const idx = DB.movimientos.findIndex(m=>m.id===editId);
         if (idx !== -1) {
             const notas2 = (document.getElementById('mov-notas')?.value||'').trim();
-            DB.movimientos[idx] = Object.assign({}, DB.movimientos[idx], {
+            DB.movimientos[idx] = gmTouch(Object.assign({}, DB.movimientos[idx], {
                 concepto: conceptoEl.value.trim(), monto, fecha, moneda,
                 notas: notas2 || undefined
-            });
+            }));
             if (flujo !== 'transferencia') {
                 DB.movimientos[idx].rubroId = parseInt(document.getElementById('mov-rubro').value);
                 DB.movimientos[idx].origen  = document.getElementById('mov-origen').value;
@@ -2992,11 +3075,11 @@ function gmBorrarRecurrente(id) {
 function gmAplicarRecurrente(id) {
     const r = (DB.recurrentes||[]).find(rc=>rc.id===id);
     if(!r) return;
-    DB.movimientos.push({
+    DB.movimientos.push(gmTouch({
         id: DB.nid++, concepto: r.concepto, monto: r.monto,
         tipo: r.tipo, rubroId: r.rubroId, origen: r.origen,
         destino: null, fecha: hoyISO(), notas: 'Recurrente'
-    });
+    }));
     save(); render();
     toast('✅ Movimiento aplicado: ' + r.concepto, 'success');
     document.getElementById('modal-gm-recurrentes')?.remove();
@@ -3945,6 +4028,11 @@ window.addEventListener('DOMContentLoaded', function() {
         if(el) el.value = savedClientId;
     }
     gmActualizarBotonesDrive();
+
+    // Sync automático y silencioso: si ya hay token de Drive vigente (sin popup), fusiona el backup más nuevo
+    if (!DEV_MODE && gmGetClientId() && gmGTokenCargarLocal()) {
+        setTimeout(() => gmAutoMergeAlAbrir(), 5400);
+    }
 
     // Cierre seguro: snapshot local al cerrar con X
     window.addEventListener('beforeunload', () => { gmHacerSnapshot(false); });
